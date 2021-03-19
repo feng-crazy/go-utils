@@ -1,4 +1,4 @@
-module github.com/hedengfeng/go-utils
+module github.com/feng-crazy/go-utils
 
 go 1.14
 
