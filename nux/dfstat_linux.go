@@ -8,7 +8,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/hedengfeng/go-utils/file"
+	"github.com/feng-crazy/go-utils/file"
 )
 
 // return: [][$fs_spec, $fs_file, $fs_vfstype]

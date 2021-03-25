@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hedengfeng/go-utils/file"
-	"github.com/hedengfeng/go-utils/slice"
-	"github.com/hedengfeng/go-utils/sys"
+	"github.com/feng-crazy/go-utils/file"
+	"github.com/feng-crazy/go-utils/slice"
+	"github.com/feng-crazy/go-utils/sys"
 )
 
 // ListeningPorts 为了兼容老代码

@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hedengfeng/go-utils/file"
+	"github.com/feng-crazy/go-utils/file"
 )
 
 func Snmp(title string) (ret map[string]int64, err error) {

@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hedengfeng/go-utils/file"
-	"github.com/hedengfeng/go-utils/sys"
+	"github.com/feng-crazy/go-utils/file"
+	"github.com/feng-crazy/go-utils/sys"
 )
 
 const (

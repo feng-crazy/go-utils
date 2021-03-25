@@ -1,4 +1,4 @@
-package smap
+package hmap
 
 import (
 	"encoding/json"

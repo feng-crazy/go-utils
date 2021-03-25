@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hedengfeng/go-utils/file"
+	"github.com/feng-crazy/go-utils/file"
 )
 
 func SystemUptime() (days, hours, mins int64, err error) {
