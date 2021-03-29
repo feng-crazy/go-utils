@@ -43,3 +43,16 @@ func Map2Struct(m map[string]interface{}, obj interface{}) error {
 	}
 	return nil
 }
+
+func MapArray2Struct(m interface{}, obj interface{}) error {
+	data, err := json.Marshal(m)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(data, obj)
+	if err != nil {
+		return err
+	}
+	return nil
+}
