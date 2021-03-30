@@ -5,19 +5,40 @@ import (
 	"errors"
 )
 
-func GetMapValue(mapStr, key string) (error, interface{}) {
+func GetMapValue(mapStr, key string) (interface{}, error) {
 	m := make(map[string]interface{})
 	err := json.Unmarshal([]byte(mapStr), &m)
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 
 	v, ok := m[key]
 	if ok {
-		return nil, v
+		return v, nil
 	} else {
-		return errors.New("not found this key "), nil
+		return nil, errors.New("not found this key ")
 	}
+}
+
+func GetArrayMapValue(mapArrayStr, key string) (interface{}, error) {
+	ms := make([]map[string]interface{}, 0)
+	err := json.Unmarshal([]byte(mapArrayStr), &ms)
+	if err != nil {
+		return err, nil
+	}
+
+	var value interface{}
+	for _, m := range ms {
+		name, ok := m["name"]
+		if ok {
+			if name == key {
+				value = m["value"]
+				return value, nil
+			}
+		}
+	}
+
+	return nil, errors.New("not found this key value")
 }
 
 func MapToStrForJson(m map[string]interface{}) (string, error) {
