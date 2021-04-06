@@ -4,6 +4,8 @@ import (
 	"runtime"
 	"sync"
 	"sync/atomic"
+
+	"gopkg.in/eapache/queue.v1"
 )
 
 // Queue queue

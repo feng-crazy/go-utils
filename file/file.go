@@ -40,7 +40,7 @@ func SelfDir() string {
 
 // get filepath base name
 func Basename(fp string) string {
-	return path.Base(fp)
+	return filepath.Base(fp)
 }
 
 // get filepath dir name
