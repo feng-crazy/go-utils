@@ -7,10 +7,10 @@ import (
 
 func StringTo(s string, t string) (value interface{}, err error) {
 	switch t {
-	case "int":
+	case "int", "int64":
 		value, err = strconv.ParseInt(s, 10, 64)
 		return
-	case "uint":
+	case "uint", "uint64":
 		value, err = strconv.ParseUint(s, 10, 64)
 		return
 	case "int32":
@@ -20,21 +20,20 @@ func StringTo(s string, t string) (value interface{}, err error) {
 		tmp, err := strconv.ParseUint(s, 10, 32)
 		value = uint32(tmp)
 		return value, err
-	case "byte":
+	case "byte", "int8":
 		tmp, err := strconv.ParseUint(s, 10, 8)
 		value = byte(tmp)
 		return value, err
-
-	case "string":
+	case "string", "String":
 		return s, nil
-	case "double":
+	case "double", "float64":
 		value, err = strconv.ParseFloat(s, 64)
 		return
-	case "float":
+	case "float", "float32":
 		tmp, err := strconv.ParseFloat(s, 32)
 		value = float32(tmp)
 		return value, err
-	case "boolean":
+	case "boolean", "bool":
 		value, err = strconv.ParseBool(s)
 		return
 	default:
