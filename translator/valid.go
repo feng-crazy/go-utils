@@ -1,4 +1,4 @@
-package valid
+package translator
 
 import (
 	"errors"
