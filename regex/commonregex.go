@@ -73,6 +73,10 @@ func match(text string, regex *regexp.Regexp) []string {
 	return parsed
 }
 
+func judge(text string, regex *regexp.Regexp) bool {
+	return regex.MatchString(text)
+}
+
 // Date finds all date strings
 func Date(text string) []string {
 	return match(text, DateRegex)

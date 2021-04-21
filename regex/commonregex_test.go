@@ -140,7 +140,7 @@ func TestCommonRegex_IPv4s(t *testing.T) {
 	assert := assert.New(t)
 
 	tests := []string{
-		"127.0.0.1",
+		"127.0.0.1.1, 168.167.63.4",
 		"192.168.1.1",
 		"8.8.8.8",
 		"192.30.253.113",
