@@ -8,7 +8,7 @@ import (
 )
 
 var eb = &EventBus{
-	subscribers: map[string]DataChannelSlice{},
+	Subscribers: map[string]DataChannelSlice{},
 }
 
 func printDataEvent(ch string, data DataEvent) {
