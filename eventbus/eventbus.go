@@ -50,3 +50,18 @@ func (eb *EventBus) Subscribe(topic string, ch DataChannel) {
 	}
 	eb.RWLock.Unlock()
 }
+
+func (eb *EventBus) UnSubscribe(topic string, ch DataChannel) {
+	eb.RWLock.Lock()
+	newDataChannels := make(DataChannelSlice, 0)
+	if channels, found := eb.Subscribers[topic]; found {
+		for _, channel := range channels {
+			if channel != ch {
+				newDataChannels = append(newDataChannels, channel)
+			}
+		}
+
+		eb.Subscribers[topic] = newDataChannels
+	}
+	eb.RWLock.Unlock()
+}

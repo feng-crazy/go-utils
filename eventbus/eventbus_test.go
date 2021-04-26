@@ -34,6 +34,8 @@ func TestEventBus(t *testing.T) {
 	go publisTo("topic1", "Hi topic 1")
 	go publisTo("topic2", "Welcome to topic 2")
 
+	eb.UnSubscribe("topic2", ch3)
+
 	for {
 		select {
 		case d := <-ch1:
@@ -44,4 +46,49 @@ func TestEventBus(t *testing.T) {
 			go printDataEvent("ch3", d)
 		}
 	}
+}
+
+func TestEventBus1(t *testing.T) {
+	ch1 := make(chan DataEvent)
+
+	eb.Subscribe("topic1", ch1)
+	eb.Subscribe("topic2", ch1)
+	eb.Subscribe("topic3", ch1)
+
+	go publisTo("topic1", "Hi topic 1")
+	go publisTo("topic2", "Welcome to topic 2")
+	go publisTo("topic3", "This is topic 3")
+
+	// eb.UnSubscribe("topic3", ch1)
+	for event := range ch1 {
+		fmt.Println(event.Topic)
+		fmt.Println(event.Data)
+		fmt.Println("-----------------")
+	}
+}
+
+func TestEventBus2(t *testing.T) {
+	ch1 := make(chan DataEvent, 0)
+
+	eb.Subscribe("topic1", ch1)
+	eb.Subscribe("topic2", ch1)
+	eb.Subscribe("topic3", ch1)
+
+	eb.Publish("topic1", "Hi topic 1")
+	eb.Publish("topic2", "Welcome to topic 2")
+	eb.Publish("topic3", "This is topic 3")
+
+	eb.Publish("topic1", "Hi topic 1")
+	eb.Publish("topic2", "Welcome to topic 2")
+	eb.Publish("topic3", "This is topic 3")
+
+	go func() {
+		for event := range ch1 {
+			fmt.Println(event.Topic)
+			fmt.Println(event.Data)
+			fmt.Println("-----------------")
+		}
+	}()
+
+	time.Sleep(2 * time.Second)
 }
