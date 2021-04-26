@@ -7,6 +7,8 @@ type DataEvent struct {
 	Topic string
 }
 
+const DataChannelQueueSize = 10
+
 // DataChannel 是一个能接收 DataEvent 的 channel
 type DataChannel chan DataEvent
 
@@ -17,6 +19,7 @@ type DataChannelSlice []DataChannel
 type EventBus struct {
 	Subscribers map[string]DataChannelSlice
 	RWLock      sync.RWMutex
+	Publisher   map[DataChannel][]string
 }
 
 func NewEventBus() *EventBus {
@@ -26,14 +29,25 @@ func NewEventBus() *EventBus {
 	}
 }
 
+// 该通道不能关闭, 在取消订阅之后, 会自动关闭
+func NewDataChannel() DataChannel {
+	return make(DataChannel, DataChannelQueueSize)
+}
+
 func (eb *EventBus) Publish(topic string, data interface{}) {
 	eb.RWLock.RLock()
 	if channels, found := eb.Subscribers[topic]; found {
-		// 这样做是因为切片引用相同的数组，即使它们是按值传递的
-		// 因此我们正在使用我们的元素创建一个新切片，从而正确地保持锁定
+		// 可以这样做是因为切片引用相同的通道，它们是引用传递的
+		// 必须创建一个新切片, 因为是闭包传递
 		channels := append(DataChannelSlice{}, channels...)
 		go func(data DataEvent, dataChannelSlices DataChannelSlice) {
 			for _, ch := range dataChannelSlices {
+				// 如果一个通道阻塞,那么该topic的其他通道都会阻塞
+				// 如果通道关闭, 该处会报panic
+				if len(ch) == DataChannelQueueSize {
+					// 通道满了,就提取一个
+					_ = <-ch
+				}
 				ch <- data
 			}
 		}(DataEvent{Data: data, Topic: topic}, channels)
@@ -48,9 +62,17 @@ func (eb *EventBus) Subscribe(topic string, ch DataChannel) {
 	} else {
 		eb.Subscribers[topic] = append([]DataChannel{}, ch)
 	}
+
+	if prev, found := eb.Publisher[ch]; found {
+		eb.Publisher[ch] = append(prev, topic)
+	} else {
+		eb.Publisher[ch] = append([]string{}, topic)
+	}
+
 	eb.RWLock.Unlock()
 }
 
+// 不能使用了要取消订阅,之后没有订阅不能再使用该通道
 func (eb *EventBus) UnSubscribe(topic string, ch DataChannel) {
 	eb.RWLock.Lock()
 	newDataChannels := make(DataChannelSlice, 0)
@@ -63,5 +85,19 @@ func (eb *EventBus) UnSubscribe(topic string, ch DataChannel) {
 
 		eb.Subscribers[topic] = newDataChannels
 	}
+
+	// 如果该通道没有发布者,这关闭该通道
+	if topics, found := eb.Publisher[ch]; found {
+		if len(topics) == 0 {
+			ch.Close()
+		}
+	} else {
+		ch.Close()
+	}
+
 	eb.RWLock.Unlock()
+}
+
+func (dc DataChannel) Close() {
+	close(dc)
 }
