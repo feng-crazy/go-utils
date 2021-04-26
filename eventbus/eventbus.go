@@ -1,6 +1,9 @@
 package eventbus
 
-import "sync"
+import (
+	"fmt"
+	"sync"
+)
 
 type DataEvent struct {
 	Data  interface{}
@@ -26,6 +29,7 @@ func NewEventBus() *EventBus {
 	return &EventBus{
 		Subscribers: map[string]DataChannelSlice{},
 		RWLock:      sync.RWMutex{},
+		Publisher:   map[DataChannel][]string{},
 	}
 }
 
@@ -84,6 +88,19 @@ func (eb *EventBus) UnSubscribe(topic string, ch DataChannel) {
 		}
 
 		eb.Subscribers[topic] = newDataChannels
+	}
+
+	newTopics := make([]string, 0)
+	if topics, found := eb.Publisher[ch]; found {
+		for _, t := range topics {
+			if t != topic {
+				newTopics = append(newTopics, t)
+			} else {
+				fmt.Println("--------")
+			}
+		}
+
+		eb.Publisher[ch] = newTopics
 	}
 
 	// 如果该通道没有发布者,这关闭该通道
