@@ -22,16 +22,18 @@ type DataChannelSlice []DataChannel
 
 // EventBus 存储有关订阅者感兴趣的特定主题的信息
 type EventBus struct {
+	// topic 订阅者
 	Subscribers map[string]DataChannelSlice
 	RWLock      sync.RWMutex
-	Publisher   map[DataChannel][]string
+	// 通道订阅者
+	Publishers map[DataChannel][]string
 }
 
 func NewEventBus() *EventBus {
 	return &EventBus{
 		Subscribers: map[string]DataChannelSlice{},
 		RWLock:      sync.RWMutex{},
-		Publisher:   map[DataChannel][]string{},
+		Publishers:  map[DataChannel][]string{},
 	}
 }
 
@@ -64,14 +66,14 @@ func (eb *EventBus) Publish(topic string, data interface{}) {
 func (eb *EventBus) Subscribe(topic string, ch DataChannel) {
 	eb.RWLock.Lock()
 	defer eb.RWLock.Unlock()
-	if prev, found := eb.Publisher[ch]; found {
+	if prev, found := eb.Publishers[ch]; found {
 		// 判断订阅是否存在,存在返回
 		if slice.ContainsString(prev, topic) {
 			return
 		}
-		eb.Publisher[ch] = append(prev, topic)
+		eb.Publishers[ch] = append(prev, topic)
 	} else {
-		eb.Publisher[ch] = append([]string{}, topic)
+		eb.Publishers[ch] = append([]string{}, topic)
 	}
 
 	if prev, found := eb.Subscribers[topic]; found {
@@ -81,7 +83,7 @@ func (eb *EventBus) Subscribe(topic string, ch DataChannel) {
 	}
 }
 
-// 不能使用了要取消订阅,之后没有订阅不能再使用该通道
+// 取消订阅，如果该通道没有订阅任何topic，将自动关闭,请慎用
 func (eb *EventBus) UnSubscribe(topic string, ch DataChannel) {
 	eb.RWLock.Lock()
 	defer eb.RWLock.Unlock()
@@ -97,7 +99,7 @@ func (eb *EventBus) UnSubscribe(topic string, ch DataChannel) {
 	}
 
 	newTopics := make([]string, 0)
-	if topics, found := eb.Publisher[ch]; found {
+	if topics, found := eb.Publishers[ch]; found {
 		for _, t := range topics {
 			if t != topic {
 				newTopics = append(newTopics, t)
@@ -106,11 +108,11 @@ func (eb *EventBus) UnSubscribe(topic string, ch DataChannel) {
 			}
 		}
 
-		eb.Publisher[ch] = newTopics
+		eb.Publishers[ch] = newTopics
 	}
 
 	// 如果该通道没有发布者,这关闭该通道
-	if topics, found := eb.Publisher[ch]; found {
+	if topics, found := eb.Publishers[ch]; found {
 		if len(topics) == 0 {
 			ch.Close()
 		}
