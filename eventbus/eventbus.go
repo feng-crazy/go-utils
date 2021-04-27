@@ -3,6 +3,8 @@ package eventbus
 import (
 	"fmt"
 	"sync"
+
+	"github.com/feng-crazy/go-utils/slice"
 )
 
 type DataEvent struct {
@@ -40,6 +42,7 @@ func NewDataChannel() DataChannel {
 
 func (eb *EventBus) Publish(topic string, data interface{}) {
 	eb.RWLock.RLock()
+	defer eb.RWLock.RUnlock()
 	if channels, found := eb.Subscribers[topic]; found {
 		// 可以这样做是因为切片引用相同的通道，它们是引用传递的
 		// 必须创建一个新切片, 因为是闭包传递
@@ -56,29 +59,32 @@ func (eb *EventBus) Publish(topic string, data interface{}) {
 			}
 		}(DataEvent{Data: data, Topic: topic}, channels)
 	}
-	eb.RWLock.RUnlock()
 }
 
 func (eb *EventBus) Subscribe(topic string, ch DataChannel) {
 	eb.RWLock.Lock()
-	if prev, found := eb.Subscribers[topic]; found {
-		eb.Subscribers[topic] = append(prev, ch)
-	} else {
-		eb.Subscribers[topic] = append([]DataChannel{}, ch)
-	}
-
+	defer eb.RWLock.Unlock()
 	if prev, found := eb.Publisher[ch]; found {
+		// 判断订阅是否存在,存在返回
+		if slice.ContainsString(prev, topic) {
+			return
+		}
 		eb.Publisher[ch] = append(prev, topic)
 	} else {
 		eb.Publisher[ch] = append([]string{}, topic)
 	}
 
-	eb.RWLock.Unlock()
+	if prev, found := eb.Subscribers[topic]; found {
+		eb.Subscribers[topic] = append(prev, ch)
+	} else {
+		eb.Subscribers[topic] = append([]DataChannel{}, ch)
+	}
 }
 
 // 不能使用了要取消订阅,之后没有订阅不能再使用该通道
 func (eb *EventBus) UnSubscribe(topic string, ch DataChannel) {
 	eb.RWLock.Lock()
+	defer eb.RWLock.Unlock()
 	newDataChannels := make(DataChannelSlice, 0)
 	if channels, found := eb.Subscribers[topic]; found {
 		for _, channel := range channels {
@@ -111,8 +117,6 @@ func (eb *EventBus) UnSubscribe(topic string, ch DataChannel) {
 	} else {
 		ch.Close()
 	}
-
-	eb.RWLock.Unlock()
 }
 
 func (dc DataChannel) Close() {

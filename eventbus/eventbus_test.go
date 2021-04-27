@@ -117,3 +117,27 @@ func TestEventBus3(t *testing.T) {
 		time.Sleep(1 * time.Second)
 	}
 }
+
+func TestEventBus4(t *testing.T) {
+	var eb = NewEventBus()
+
+	ch1 := NewDataChannel()
+
+	eb.Subscribe("topic1", ch1)
+	eb.Subscribe("topic2", ch1)
+	eb.Subscribe("topic2", ch1)
+
+	go publisTo(eb, "topic1", "Hi topic 1")
+	go publisTo(eb, "topic2", "Welcome to topic 2")
+
+	for {
+		select {
+		case d := <-ch1:
+			go printDataEvent("ch1", d)
+		}
+	}
+
+	// for {
+	// 	time.Sleep(1 * time.Second)
+	// }
+}
