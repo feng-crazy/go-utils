@@ -42,6 +42,14 @@ func NewDataChannel() DataChannel {
 	return make(DataChannel, DataChannelQueueSize)
 }
 
+// 该通道不能关闭, 在取消订阅之后, 会自动关闭
+func NewDataChannelWithSize(size int) DataChannel {
+	if size <= DataChannelQueueSize {
+		size = DataChannelQueueSize
+	}
+	return make(DataChannel, size)
+}
+
 func (eb *EventBus) Publish(topic string, data interface{}) {
 	eb.RWLock.RLock()
 	defer eb.RWLock.RUnlock()
