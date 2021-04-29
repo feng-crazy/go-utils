@@ -12,7 +12,7 @@ type DataEvent struct {
 	Topic string
 }
 
-const DataChannelQueueSize = 10
+const DataChannelQueueSize = 100
 
 // DataChannel 是一个能接收 DataEvent 的 channel
 type DataChannel chan DataEvent
