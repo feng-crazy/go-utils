@@ -1,6 +1,7 @@
 package str
 
 import (
+	"encoding/json"
 	"errors"
 	"strconv"
 )
@@ -39,4 +40,10 @@ func StringTo(s string, t string) (value interface{}, err error) {
 	default:
 		return nil, errors.New("不支持的类型")
 	}
+}
+
+func StringToMap(data string) map[string]interface{} {
+	var jsonData map[string]interface{}
+	_ = json.Unmarshal([]byte(data), &jsonData)
+	return jsonData
 }

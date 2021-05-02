@@ -1,6 +1,7 @@
 package str
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 )
@@ -63,4 +64,12 @@ func ArrStringsToString(arr []string) (result string, err error) {
 func ArrStringsToStringMust(arr []string) (result string) {
 	result, _ = ArrStringsToString(arr)
 	return
+}
+
+func MapToJsonString(data map[string]interface{}) string {
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return ""
+	}
+	return string(jsonData)
 }

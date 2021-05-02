@@ -309,3 +309,41 @@ func GetTimeMilliSecond(timeType, timeString string) (int64, error) {
 	}
 	return tm2.UnixNano() / 1e6, nil
 }
+
+var (
+	zone = "CST" // 时区
+)
+
+func TimeIntToDate(timeInt int) string {
+	var cstZone = time.FixedZone(zone, 8*3600)
+	return time.Unix(int64(timeInt), 0).In(cstZone).Format("2006-01-02 15:04:05")
+}
+
+func GetNowDateTime() string {
+	var cstZone = time.FixedZone(zone, 8*3600)
+	return time.Now().In(cstZone).Format("2006-01-02 15:04:05")
+}
+
+func GetDate() string {
+	var cstZone = time.FixedZone(zone, 8*3600)
+	return time.Now().In(cstZone).Format("2006-01-02")
+}
+
+// 防时间间隔
+func GetIntTime() int {
+	var _t = int(time.Now().Unix())
+	return _t
+}
+
+// 获取今天时间戳 Today => 00:00:00
+func TodayTimeUnix() int {
+	t := time.Now()
+	tm1 := int(time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location()).Unix())
+	return tm1
+}
+
+// 获取今天时间戳 Today => 23:59:59
+func TodayNightUnix() int {
+	tm1 := TodayTimeUnix() + 86400 - 1
+	return tm1
+}

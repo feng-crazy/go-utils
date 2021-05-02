@@ -1,4 +1,4 @@
-package integer
+package number
 
 // IntMax returns the maximum of the params
 func IntMax(a, b int) int {

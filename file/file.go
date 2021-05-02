@@ -91,6 +91,16 @@ func Remove(name string) error {
 	return os.Remove(name)
 }
 
+// 创建全路径
+func BuildDir(absDir string) error {
+	return os.MkdirAll(path.Dir(absDir), os.ModePerm) // 生成多级目录
+}
+
+// 删除文件或文件夹
+func DeleteFile(absDir string) error {
+	return os.RemoveAll(absDir)
+}
+
 // close fd
 func Close(fd *os.File) error {
 	return fd.Close()
@@ -140,7 +150,7 @@ func FileSize(fp string) (int64, error) {
 }
 
 // list dirs under dirPath
-func DirsUnder(dirPath string) ([]string, error) {
+func GetPathDirs(dirPath string) ([]string, error) {
 	if !IsExist(dirPath) {
 		return []string{}, nil
 	}
@@ -169,7 +179,7 @@ func DirsUnder(dirPath string) ([]string, error) {
 }
 
 // list files under dirPath
-func FilesUnder(dirPath string) ([]string, error) {
+func GetPathFiles(dirPath string) ([]string, error) {
 	if !IsExist(dirPath) {
 		return []string{}, nil
 	}
