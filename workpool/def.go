@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-const MaxNum = 100
+const MaxNum = 200
 
 // TaskHandler Define function callbacks
 type TaskHandler func() error

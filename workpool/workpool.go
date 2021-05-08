@@ -13,10 +13,7 @@ func New(max int) *WorkPool { // 注册工作池，并设置最大并发数
 		max = 2
 	}
 
-	poolNum := max / 2
-	if poolNum > MaxNum {
-		poolNum = MaxNum
-	}
+	poolNum := max
 
 	p := &WorkPool{
 		task:         make(chan TaskHandler, poolNum),
@@ -124,7 +121,7 @@ func (p *WorkPool) loop(maxWorkersCount int) {
 	for i := 0; i < maxWorkersCount; i++ {
 		go func() {
 			defer p.wg.Done()
-			// worker 开始干活
+			// worker 开始干活,从任务队列里面取
 			for wt := range p.task {
 				if wt == nil || atomic.LoadInt32(&p.closed) == 1 { // returns immediately,有err 立即返回
 					continue // It needs to be consumed before returning.需要先消费完了之后再返回，
@@ -153,7 +150,6 @@ func (p *WorkPool) loop(maxWorkersCount int) {
 					select {
 					case p.errChan <- err:
 						// if atomic.LoadInt32(&p.closed) != 1 {
-						// mylog.Error(err)
 						atomic.StoreInt32(&p.closed, 1)
 					default:
 					}
