@@ -150,6 +150,11 @@ func FileSize(fp string) (int64, error) {
 }
 
 // list dirs under dirPath
+func DirsUnder(dirPath string) ([]string, error) {
+	return GetPathDirs(dirPath)
+}
+
+// list dirs under dirPath
 func GetPathDirs(dirPath string) ([]string, error) {
 	if !IsExist(dirPath) {
 		return []string{}, nil
@@ -176,6 +181,10 @@ func GetPathDirs(dirPath string) ([]string, error) {
 	}
 
 	return ret, nil
+}
+
+func FilesUnder(dirPath string) ([]string, error) {
+	return GetPathFiles(dirPath)
 }
 
 // list files under dirPath
