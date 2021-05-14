@@ -5,6 +5,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/sirupsen/logrus"
 	"gopkg.in/eapache/queue.v1"
 )
 
@@ -15,14 +16,16 @@ type Queue struct {
 	buffer  *queue.Queue
 	closed  bool
 	count   int32
+	max     int32
 }
 
 // New 创建
-func NewQueue() *Queue {
+func NewQueue(max int32) *Queue {
 	ch := &Queue{
 		buffer: queue.New(),
 	}
 	ch.popable = sync.NewCond(&ch.Mutex)
+	ch.max = max
 	return ch
 }
 
@@ -74,6 +77,10 @@ func (q *Queue) Push(v interface{}) {
 	q.Mutex.Lock()
 	defer q.Mutex.Unlock()
 	if !q.closed {
+		if q.Len() == q.max {
+			logrus.Error("Queue is full, return")
+			return
+		}
 		q.buffer.Add(v)
 		atomic.AddInt32(&q.count, 1)
 		q.popable.Signal()
@@ -81,8 +88,8 @@ func (q *Queue) Push(v interface{}) {
 }
 
 // 获取队列长度
-func (q *Queue) Len() int {
-	return (int)(atomic.LoadInt32(&q.count))
+func (q *Queue) Len() int32 {
+	return atomic.LoadInt32(&q.count)
 }
 
 // Close Queue

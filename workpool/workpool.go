@@ -8,7 +8,8 @@ import (
 )
 
 // New new workpool and set the max number of concurrencies
-func New(max int) *WorkPool { // 注册工作池，并设置最大并发数
+// 注册工作池，并设置最大并发数, 队列的大小最大是max的1000倍，是动态扩展的
+func New(max int) *WorkPool {
 	if max < 2 {
 		max = 2
 	}
@@ -18,7 +19,7 @@ func New(max int) *WorkPool { // 注册工作池，并设置最大并发数
 	p := &WorkPool{
 		task:         make(chan TaskHandler, poolNum),
 		errChan:      make(chan error, 1),
-		waitingQueue: NewQueue(),
+		waitingQueue: NewQueue(int32(max * 1000)),
 	}
 
 	go p.loop(poolNum)

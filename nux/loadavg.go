@@ -40,3 +40,8 @@ func LoadAvg() (*Loadavg, error) {
 
 	return &loadAvg, nil
 }
+
+func LoadAvgString() (string, error) {
+	data, err := file.ToTrimString("/proc/loadavg")
+	return data, err
+}
