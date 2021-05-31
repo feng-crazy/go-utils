@@ -78,6 +78,6 @@ func (mq *MQApp) startListen(queue *Queue) {
 	}(queue)
 }
 
-func (mq *MQApp) Pub(q *Queue, msg *Message) error {
-	return mq.Client.Pub(q, msg)
+func (mq *MQApp) Push(q *Queue, msg *Message) error {
+	return mq.Client.Push(q, msg)
 }

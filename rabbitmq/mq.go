@@ -123,7 +123,7 @@ func (mq *MQ) reconnect() {
 
 var subMu sync.Mutex
 
-// Sub 定于队列消息
+// Sub 订阅队列消息
 // q 队列
 // return 接收消息的通道 ， 错误对象
 func (mq *MQ) Sub(q *Queue) (<-chan *Message, error) {
@@ -137,7 +137,7 @@ func (mq *MQ) Sub(q *Queue) (<-chan *Message, error) {
 		q.consumerChan = make(chan *Message, 2)
 	}
 
-	mq.bindMQChan(q)
+	_ = mq.bindMQChan(q)
 
 	return q.consumerChan, nil
 }
@@ -196,11 +196,11 @@ func (mq *MQ) bindMQChan(q *Queue) error {
 
 var pubMu sync.Mutex
 
-// Pub 给队列发送消息,
+// Push 给队列发送消息,
 // q 队列,
 // msg 消息,
 // exchanges 交换机，可以用多个交换机多次发送，默认使用初始化时指定的交换机
-func (mq *MQ) Pub(q *Queue, msg *Message, exchanges ...*Exchange) error {
+func (mq *MQ) Push(q *Queue, msg *Message, exchanges ...*Exchange) error {
 	pubMu.Lock()
 	defer pubMu.Unlock()
 
@@ -252,6 +252,49 @@ func (mq *MQ) Pub(q *Queue, msg *Message, exchanges ...*Exchange) error {
 			amqp.Publishing{
 				ContentType: msg.ContentType,
 				ReplyTo:     q.ReplyQueue(),
+				Body:        msg.Data,
+			},
+		)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+
+}
+
+// Pub 给队列发送消息,
+// routingKey 交换机路由的key,
+// msg 消息,
+// exchanges 交换机，可以用多个交换机多次发送，默认使用初始化时指定的交换机
+func (mq *MQ) Pub(routingKey string, msg *Message, exchanges ...*Exchange) error {
+	pubMu.Lock()
+	defer pubMu.Unlock()
+
+	if len(exchanges) == 0 {
+		exchanges = append(exchanges, mq.Exchange)
+		// 绑定初始化的交换机
+	} else {
+		for _, e := range exchanges {
+			if !e.IsDeclare {
+				err := mq.ExchangeDeclare(e)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	for _, e := range exchanges {
+		// 发消息
+		err := mq.Channel.Publish(
+			e.Name,
+			routingKey,
+			false,
+			false,
+			amqp.Publishing{
+				ContentType: msg.ContentType,
 				Body:        msg.Data,
 			},
 		)

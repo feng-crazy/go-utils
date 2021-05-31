@@ -2,13 +2,15 @@ package rabbitmq
 
 import (
 	"errors"
+
+	"github.com/streadway/amqp"
 )
 
 const (
-	ExchangeDirect  = "direct"  // 直连交换机
-	ExchangeFanout  = "fanout"  // 扇形交换机
-	ExchangeTopic   = "topic"   // 主题交换机
-	ExchangeHeaders = "headers" // 头交换机
+	ExchangeDirect  = amqp.ExchangeDirect  // 直连交换机
+	ExchangeFanout  = amqp.ExchangeFanout  // 扇形交换机
+	ExchangeTopic   = amqp.ExchangeTopic   // 主题交换机
+	ExchangeHeaders = amqp.ExchangeHeaders // 头交换机
 )
 
 // Config 配置项

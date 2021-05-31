@@ -15,6 +15,6 @@ type MQContext struct {
 func (c *MQContext) BindJSON(v interface{}) error {
 	return json.Unmarshal(c.Request.Data, v)
 }
-func (c *MQContext) Pub(q *Queue, msg *Message) error {
-	return c.Client.Pub(q, msg)
+func (c *MQContext) Push(q *Queue, msg *Message) error {
+	return c.Client.Push(q, msg)
 }

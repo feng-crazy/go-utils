@@ -26,5 +26,5 @@ func (m *Message) JSON(v interface{}) error {
 
 // ReplyTo 给回复的队列发送消息
 func (m *Message) ReplyTo(msg *Message) error {
-	return m.mq.Pub(m.Queue.ReplyTo, msg)
+	return m.mq.Push(m.Queue.ReplyTo, msg)
 }

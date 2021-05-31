@@ -30,7 +30,7 @@ func TestAmqp(t *testing.T) {
 	wg := sync.WaitGroup{}
 	si := 0
 	for ; si < testCount; si++ {
-		err := mq.Pub(queue, msg)
+		err := mq.Push(queue, msg)
 		if err != nil {
 			panic(err)
 		}
@@ -55,10 +55,11 @@ func TestAmqp(t *testing.T) {
 }
 
 func TestExchangePub(t *testing.T) {
+	ex := &Exchange{Name: "hdf.ex.test.direct", Kind: ExchangeDirect, AutoDelete: true}
 	queue := &Queue{Name: "hdf.queue.test2", Key: "hdf.queue2.*"}
 	mq, err := New(&Config{
-		Addr:         "amqp://guest:guest@10.122.48.78:5672/",
-		ExchangeName: "hdf.exchange.test2", // 直连交换机名称
+		Addr:     "amqp://guest:guest@10.122.48.78:5672/",
+		Exchange: ex,
 	})
 	if err != nil {
 		panic(err)
@@ -74,25 +75,18 @@ func TestExchangePub(t *testing.T) {
 			panic(err)
 		}
 		for msg := range msgs {
-			var v interface{}
-			err := msg.JSON(&v)
-			if err != nil {
-				panic(err)
-			}
 			wg2.Done()
-			fmt.Printf("msg: %s \n", v)
+			fmt.Printf("msg: %s \n", msg.Data)
 		}
 	}()
 
 	<-time.After(100 * time.Millisecond)
 
-	msg := &Message{
-		Data: []byte(`{"seqno":"1563541319","cmd":"44","data":{"uid":1070869}}`),
-	}
-	ex := &Exchange{Name: "hdf.ex.test.fanout", Kind: ExchangeFanout, AutoDelete: true}
-
 	for i := 0; i < count; i++ {
-		err := mq.Pub(queue, msg, ex)
+		data := "test  %d " + time.Now().String()
+		data = fmt.Sprintf(data, i)
+		err := mq.Pub("hdf.queue2.*", &Message{Data: []byte(data)})
+		// err := mq.Push(queue, msg, ex)
 		if err != nil {
 			panic(err)
 		}
@@ -127,12 +121,12 @@ func TestAmqpApp(t *testing.T) {
 				return
 			}
 			t.Logf("mq context here, data: %+v", body)
-			c.Pub(testReplyQueue, &Message{Data: []byte(`{"hello":"world"}`)})
+			c.Push(testReplyQueue, &Message{Data: []byte(`{"hello":"world"}`)})
 			wg.Done()
 		},
 	})
 
-	mq.Pub(testQueue, &Message{Data: []byte(`{"hello":"world"}`)})
+	mq.Push(testQueue, &Message{Data: []byte(`{"hello":"world"}`)})
 	wg.Wait()
 }
 
@@ -169,7 +163,7 @@ func TestSimple(t *testing.T) {
 	}
 
 	queue := &Queue{Name: "hdf.queue.test"}
-	err = mq.Pub(queue, &Message{Data: []byte("{\"hello\":\"world\"}")})
+	err = mq.Push(queue, &Message{Data: []byte("{\"hello\":\"world\"}")})
 	if err != nil {
 		panic(err)
 	}
@@ -205,7 +199,7 @@ func TestAmqpR(t *testing.T) {
 		msg := &Message{
 			Data: []byte(fmt.Sprintf(`{"cmd":"req_mall_card_detail_list","data":{"card_id":1,"mid":9100251},"seqno":"%d"}`, si)),
 		}
-		err := mq.Pub(queue, msg)
+		err := mq.Push(queue, msg)
 		if err != nil {
 			panic(err)
 		}
