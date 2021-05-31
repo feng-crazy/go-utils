@@ -43,9 +43,9 @@ func InitLogs(logPath, projectName, level string) {
 		writer, _ := rotatelogs.New(
 			logFilePath,
 			rotatelogs.WithLinkName(logFileLinkPath),
-			rotatelogs.WithMaxAge(15*24*time.Hour),
+			rotatelogs.WithRotationCount(30),
 			rotatelogs.WithRotationTime(24*time.Hour),
-			rotatelogs.WithRotationSize(200*1000*1000),
+			rotatelogs.WithRotationSize(256*1024*1024),
 		)
 		// logrus.SetOutput(writer)
 		logrus.SetOutput(io.MultiWriter(os.Stdout, writer)) // 控制台和文件打印
