@@ -30,12 +30,13 @@ func TestEventBus(t *testing.T) {
 	eb.Subscribe("topic1", ch1)
 	eb.Subscribe("topic2", ch2)
 	eb.Subscribe("topic2", ch3)
+	eb.Subscribe("topic2", ch3)
 
 	go publishTo(eb, "topic1", "Hi topic 1")
 	go publishTo(eb, "topic2", "Welcome to topic 2")
 
 	eb.UnSubscribe("topic2", ch3)
-	// eb.UnSubscribe("topic2", ch2)
+	eb.UnSubscribe("topic2", ch2)
 	// eb.UnSubscribe("topic1", ch1)
 	for {
 		select {

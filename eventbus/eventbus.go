@@ -1,7 +1,6 @@
 package eventbus
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/sirupsen/logrus"
@@ -16,7 +15,7 @@ type DataEvent struct {
 
 const DataChannelQueueMixSize = 2
 
-// DataChannel 是一个能接收 DataEvent 的 channel
+// DataChannel 是一个能接收 DataEvent 的 channel,如果通道的大小等于最大的size会丢掉数据
 type DataChannel struct {
 	Channel        chan DataEvent
 	ChannelMaxSize int
@@ -103,7 +102,7 @@ func (eb *EventBus) Subscribe(topic string, ch DataChannel) {
 	}
 }
 
-// 取消订阅，如果该通道没有订阅任何topic，将自动关闭,请慎用
+// 取消订阅，如果该通道没有订阅任何topic，将自动关闭,请慎用，重复调用会出问题
 func (eb *EventBus) UnSubscribe(topic string, ch DataChannel) {
 	eb.RWLock.Lock()
 	defer eb.RWLock.Unlock()
@@ -115,7 +114,11 @@ func (eb *EventBus) UnSubscribe(topic string, ch DataChannel) {
 			}
 		}
 
-		eb.Subscribers[topic] = newDataChannels
+		if len(newDataChannels) == 0 {
+			delete(eb.Subscribers, topic)
+		} else {
+			eb.Subscribers[topic] = newDataChannels
+		}
 	}
 
 	newTopics := make([]string, 0)
@@ -123,21 +126,14 @@ func (eb *EventBus) UnSubscribe(topic string, ch DataChannel) {
 		for _, t := range topics {
 			if t != topic {
 				newTopics = append(newTopics, t)
-			} else {
-				fmt.Println("--------")
 			}
 		}
 
-		eb.Publishers[ch] = newTopics
-	}
-
-	// 如果该通道没有发布者,这关闭该通道
-	if topics, found := eb.Publishers[ch]; found {
-		if len(topics) == 0 {
-			ch.Close()
+		if len(newTopics) == 0 {
+			delete(eb.Publishers, ch)
+		} else {
+			eb.Publishers[ch] = newTopics
 		}
-	} else {
-		ch.Close()
 	}
 }
 
