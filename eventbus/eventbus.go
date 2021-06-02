@@ -73,8 +73,12 @@ func (eb *EventBus) Publish(topic string, data interface{}) {
 				// 如果通道关闭, 该处会报panic
 				if len(dataChannel.Channel) >= dataChannel.ChannelMaxSize {
 					// 通道满了,就提取一个丢掉
-					logrus.Error("eventbus 通道满了,提取一个丢掉", len(dataChannel.Channel))
-					_ = <-dataChannel.Channel
+					select {
+					case _ = <-dataChannel.Channel:
+						logrus.Error("eventbus 通道满了,提取一个丢掉", len(dataChannel.Channel))
+					default:
+
+					}
 				}
 				dataChannel.Channel <- data
 			}
