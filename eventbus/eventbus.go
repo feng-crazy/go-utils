@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/feng-crazy/go-utils/slice"
 )
 
@@ -12,10 +14,13 @@ type DataEvent struct {
 	Topic string
 }
 
-const DataChannelQueueSize = 100
+const DataChannelQueueMixSize = 2
 
 // DataChannel 是一个能接收 DataEvent 的 channel
-type DataChannel chan DataEvent
+type DataChannel struct {
+	Channel        chan DataEvent
+	ChannelMaxSize int
+}
 
 // DataChannelSlice 是一个包含 DataChannels 数据的切片
 type DataChannelSlice []DataChannel
@@ -39,15 +44,21 @@ func NewEventBus() *EventBus {
 
 // 该通道不能关闭, 在取消订阅之后, 会自动关闭
 func NewDataChannel() DataChannel {
-	return make(DataChannel, DataChannelQueueSize)
+	return DataChannel{
+		Channel:        make(chan DataEvent, DataChannelQueueMixSize),
+		ChannelMaxSize: DataChannelQueueMixSize,
+	}
 }
 
 // 该通道不能关闭, 在取消订阅之后, 会自动关闭
 func NewDataChannelWithSize(size int) DataChannel {
-	if size <= DataChannelQueueSize {
-		size = DataChannelQueueSize
+	if size < DataChannelQueueMixSize {
+		size = DataChannelQueueMixSize
 	}
-	return make(DataChannel, size)
+	return DataChannel{
+		Channel:        make(chan DataEvent, size),
+		ChannelMaxSize: size,
+	}
 }
 
 func (eb *EventBus) Publish(topic string, data interface{}) {
@@ -58,14 +69,15 @@ func (eb *EventBus) Publish(topic string, data interface{}) {
 		// 必须创建一个新切片, 因为是闭包传递
 		channels := append(DataChannelSlice{}, channels...)
 		go func(data DataEvent, dataChannelSlices DataChannelSlice) {
-			for _, ch := range dataChannelSlices {
+			for _, dataChannel := range dataChannelSlices {
 				// 如果一个通道阻塞,那么该topic的其他通道都会阻塞
 				// 如果通道关闭, 该处会报panic
-				if len(ch) == DataChannelQueueSize {
-					// 通道满了,就提取一个
-					_ = <-ch
+				if len(dataChannel.Channel) >= dataChannel.ChannelMaxSize {
+					// 通道满了,就提取一个丢掉
+					logrus.Error("eventbus 通道满了,提取一个丢掉", len(dataChannel.Channel))
+					_ = <-dataChannel.Channel
 				}
-				ch <- data
+				dataChannel.Channel <- data
 			}
 		}(DataEvent{Data: data, Topic: topic}, channels)
 	}
@@ -130,5 +142,5 @@ func (eb *EventBus) UnSubscribe(topic string, ch DataChannel) {
 }
 
 func (dc DataChannel) Close() {
-	close(dc)
+	close(dc.Channel)
 }
