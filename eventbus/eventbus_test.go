@@ -16,16 +16,18 @@ func printDataEvent(ch string, data DataEvent) {
 func publishTo(eb *EventBus, topic string, data string) {
 	for {
 		eb.Publish(topic, data)
-		time.Sleep(time.Duration(rand.Intn(1000)) * time.Millisecond)
+		num := rand.Intn(1000)
+		fmt.Printf("publish topic %s, data:%s, sleep %d\n", topic, data, num)
+		time.Sleep(time.Duration(num) * time.Millisecond)
 	}
 }
 
 func TestEventBus(t *testing.T) {
 	var eb = NewEventBus()
 
-	ch1 := NewDataChannel()
-	ch2 := NewDataChannel()
-	ch3 := NewDataChannel()
+	ch1 := NewDataChannelWithSize(2)
+	ch2 := NewDataChannelWithSize(2)
+	ch3 := NewDataChannelWithSize(2)
 
 	eb.Subscribe("topic1", ch1)
 	eb.Subscribe("topic2", ch2)
@@ -47,6 +49,7 @@ func TestEventBus(t *testing.T) {
 		case d := <-ch3.Channel:
 			printDataEvent("ch3", d)
 		}
+		time.Sleep(time.Duration(rand.Intn(1000)) * time.Millisecond)
 	}
 }
 

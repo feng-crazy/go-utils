@@ -2,6 +2,7 @@ package clock
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 )
 
@@ -294,9 +295,21 @@ func GetNowInMilli() int64 {
 	return TimeToUnixMilli(time.Now())
 }
 
+func GetNowInMilliString() string {
+	return strconv.FormatInt(GetNowInMilli(), 10)
+}
+
 // 获取当前时间的毫秒值
 func GetNowMilliSecond() int64 {
 	return time.Now().UnixNano() / 1e6
+}
+
+func GetNowMilliSecondString() string {
+	return strconv.FormatInt(GetNowMilliSecond(), 10)
+}
+
+func GetNowSecondString() string {
+	return strconv.FormatInt(time.Now().Unix(), 10)
 }
 
 //  获取指定时间的时间戳
