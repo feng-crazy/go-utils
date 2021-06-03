@@ -14,6 +14,11 @@ func GenerateUUID() string {
 	return id
 }
 
+// NewV1 returns UUID based on current timestamp and MAC address.
+func GenerateUUIDv1() string {
+	return uuid.NewV1().String()
+}
+
 // NewUUID returns a Version 1 UUID based on the current NodeID and clock
 // sequence, and the current time.  If the NodeID has not been set by SetNodeID
 // or SetNodeInterface then it will be set automatically.  If the NodeID cannot
@@ -24,4 +29,9 @@ func NewUUID() string {
 	sig, _ := guuid.NewUUID()
 	id := strings.Replace(sig.String(), "-", "", -1)
 	return id
+}
+
+func NewUUIDv1() string {
+	sig, _ := guuid.NewUUID()
+	return sig.String()
 }
