@@ -95,7 +95,7 @@ func (mc *MqttClient) Connect() error {
 	}
 
 	opts.AddBroker(mc.IP)
-	opts.SetClientID(uuid.GenerateUUID())
+	opts.SetClientID(uuid.NewUUIDv1())
 	opts.SetCleanSession(false)
 	opts.SetAutoReconnect(true)
 	opts.SetConnectRetryInterval(10 * time.Second)
