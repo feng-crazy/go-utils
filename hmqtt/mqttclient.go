@@ -23,7 +23,14 @@ type MqttClient struct {
 	CA         string
 	Cert       string
 	PrivateKey string
-	Client     mqtt.Client
+
+	WillEnabled  bool
+	WillTopic    string
+	WillPayload  []byte
+	WillQos      byte
+	WillRetained bool
+
+	Client mqtt.Client
 }
 
 // newTLSConfig new TLS configuration.
@@ -102,6 +109,11 @@ func (mc *MqttClient) Connect() error {
 	opts.SetMaxReconnectInterval(1 * time.Minute)
 	opts.SetConnectTimeout(2 * time.Second)
 	opts.SetReconnectingHandler(SetReconnectingCb)
+	opts.WillEnabled = mc.WillEnabled
+	opts.WillTopic = mc.WillTopic
+	opts.WillPayload = mc.WillPayload
+	opts.WillQos = mc.WillQos
+	opts.WillRetained = mc.WillRetained
 
 	var reconn = false
 	opts.SetConnectionLostHandler(func(client mqtt.Client, e error) {
