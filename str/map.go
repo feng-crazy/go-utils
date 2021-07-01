@@ -21,8 +21,11 @@ func KeysOfMap(m map[string]interface{}) []string {
 
 func SingleMapKeyToStrArray(ms map[string]interface{}) []string {
 	keys := make([]string, len(ms))
+
+	i := 0
 	for key := range ms {
-		keys = append(keys, key)
+		keys[i] = key
+		i++
 	}
 
 	return keys
@@ -39,8 +42,10 @@ func SingleStructJsonTagToStrArray(st interface{}) ([]string, error) {
 	}
 
 	keys := make([]string, len(ms))
+	i := 0
 	for key := range ms {
-		keys = append(keys, key)
+		keys[i] = key
+		i++
 	}
 
 	return keys, nil
