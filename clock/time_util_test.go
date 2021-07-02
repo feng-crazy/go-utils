@@ -1,6 +1,7 @@
 package clock
 
 import (
+	"fmt"
 	"testing"
 	"time"
 )
@@ -32,4 +33,8 @@ func TestMockClock(t *testing.T) {
 	if n != 0 {
 		t.Errorf("mock clock now mismatch:\n\nexp=%#v\n\ngot=%#v\n\n", 0, n)
 	}
+}
+
+func TestGetNowDateTime(t *testing.T) {
+	fmt.Println(GetNowDateTime())
 }
