@@ -3,6 +3,7 @@ package hmap
 import (
 	"encoding/json"
 	"reflect"
+	"strings"
 )
 
 func Struct2Map(obj interface{}) map[string]interface{} {
@@ -28,6 +29,34 @@ func Struct2MapWithJson(obj interface{}) (map[string]interface{}, error) {
 		return nil, err
 	}
 	return m, nil
+}
+
+func Struct2MapWithGorm(obj interface{}) (map[string]interface{}, error) {
+
+	t := reflect.TypeOf(obj)
+	v := reflect.ValueOf(obj)
+
+	var data = make(map[string]interface{})
+	for i := 0; i < t.NumField(); i++ {
+		f := t.Field(i)
+		if f.PkgPath != "" {
+			continue
+		}
+		key := t.Field(i).Name
+		tagValue := f.Tag.Get("gorm")
+		tags := strings.Split(tagValue, ";")
+		for _, tag := range tags {
+			dd := strings.Split(tag, ":")
+			if dd[0] == "column" {
+				key = dd[1]
+				break
+			}
+		}
+
+		data[key] = v.Field(i).Interface()
+	}
+
+	return data, nil
 }
 
 // obj 必须要结构体指针
