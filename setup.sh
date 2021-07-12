@@ -24,6 +24,8 @@ source ~/.bashrc
 #输入法
 sudo apt install -y fcitx
 sudo apt install -y ibus
+sudo apt install ibus-libpinyin
+sudo apt install ibus-clutter
 #常用开发工具
 sudo apt install -y chromium-browser
 sudo apt install -y wget curl git vim tree
@@ -35,6 +37,10 @@ sudo apt install -y default-jdk
 sudo add-apt-repository ppa:longsleep/golang-backports
 sudo apt-get update
 sudo apt-get install golang-go
+
+sudo add-apt-repository ppa:lazygit-team/release
+sudo apt-get update
+sudo apt-get install lazygit
 
 #nodejs相关
 sudo apt install -y nodejs npm
