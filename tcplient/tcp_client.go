@@ -38,6 +38,7 @@ type TCPClient struct {
 
 	maxRetries    int
 	retryInterval time.Duration
+	reconnectedCb func()
 }
 
 // Dial returns a new net.Conn.
@@ -129,6 +130,18 @@ func (c *TCPClient) GetRetryInterval() time.Duration {
 	return c.retryInterval
 }
 
+func (c *TCPClient) SetReConnectedCb(cb func()) {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+	c.reconnectedCb = cb
+}
+
+func (c *TCPClient) Reconnect() error {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+	return c.reconnect()
+}
+
 // ----------------------------------------------------------------------------
 
 // reconnect builds a new TCP connection to replace the embedded *net.TCPConn.
@@ -176,7 +189,9 @@ func (c *TCPClient) reconnect() error {
 
 	// we're back online, set shared status accordingly
 	atomic.StoreInt32(&c.status, statusOnline)
-
+	if c.reconnectedCb != nil {
+		c.reconnectedCb()
+	}
 	return nil
 }
 
