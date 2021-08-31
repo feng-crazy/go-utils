@@ -2,14 +2,11 @@ package rpcpool
 
 import (
 	"errors"
-	"net/rpc"
 	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 )
-
-var ErrShutdown = rpc.ErrShutdown
 
 const constTPC = "tcp"
 
