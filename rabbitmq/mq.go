@@ -73,7 +73,7 @@ func (mq *MQ) reconnect() {
 		// 已经连上了，监听关闭消息
 		closeCh := make(chan *amqp.Error)
 		mq.Channel.NotifyClose(closeCh)
-		err := <-closeCh
+		err := <-closeCh // 如果连接丢失这里就不会阻塞
 		fmt.Printf("rabbitmq connection is close: %v, retrying...\n", err)
 		mq.Client.Close()
 		mq.Channel.Close()
@@ -89,36 +89,6 @@ func (mq *MQ) reconnect() {
 	}
 	time.Sleep(2 * time.Second)
 	mq.reconnect()
-	// if err != nil {
-	//
-	// 	err := mq.connect()
-	// 	if err != nil {
-	// 		mq.reconnect()
-	// 	}
-	// }
-
-	// for {
-	// 	closeCh := make(chan *amqp.Error)
-	// 	mq.Channel.NotifyClose(closeCh)
-	//
-	// 	err, ok := <-closeCh
-	// 	if !ok {
-	// 		continue
-	// 	}
-	// 	if err == nil {
-	// 		continue
-	// 	}
-	//
-	// 	fmt.Printf("rabbitmq connection is close: %v, retrying...\n", err)
-	// 	if mq.Client != nil {
-	// 		mq.Client.Close()
-	// 		mq.Client = nil
-	//
-	// 	}
-	// 	<-time.After(2 * time.Second) // 隔 2s 重连一次
-	// 	mq.connect()
-	//
-	// }
 }
 
 var subMu sync.Mutex

@@ -16,7 +16,7 @@ func TestAmqp(t *testing.T) {
 	}
 
 	mq, err := New(&Config{
-		Addr:         "amqp://guest:guest@10.122.48.78:5672/",
+		Addr:         "amqp://admin:admin@10.229.250.5:5673/",
 		ExchangeName: "hdf.exchange1.test",
 	})
 	if err != nil {
@@ -36,7 +36,6 @@ func TestAmqp(t *testing.T) {
 		}
 	}
 	t.Logf("发送 %d 条数据, 耗时 %d 纳秒 \n", si, time.Since(startTime))
-
 	startTime1 := time.Now()
 	wg.Add(testCount)
 	go func() {
@@ -220,4 +219,123 @@ func TestAmqpR(t *testing.T) {
 
 	// wg.Wait()
 	// t.Logf("消费 %d 条数据, 耗时 %d 纳秒 \n", testCount, time.Since(startTime1))
+}
+
+func TestMqPool(t *testing.T) {
+	queue := &Queue{Name: "hdf.queue1.test"}
+	// exchange := &Exchange{Name: "hdf.exchange.test"}
+
+	msg := &Message{
+		Data: []byte("{\"seqno\":\"1563541319\",\"cmd\":\"44\",\"data\":{\"mid\":1070869}}"),
+	}
+	ex := &Exchange{
+		Name:       "hdf.exchange1.test",
+		Kind:       ExchangeDirect,
+		Durable:    true,
+		AutoDelete: false,
+		Internal:   false,
+		NoWait:     false,
+		Args:       nil,
+		IsDeclare:  false,
+	}
+
+	clients, err := NewClients("amqp://admin:admin@10.229.250.5:5673/", ex, 10)
+	if err != nil {
+		panic(err)
+	}
+
+	testCount := 100
+
+	startTime := time.Now()
+
+	wg := sync.WaitGroup{}
+	for i := 0; i < 10; i++ {
+		si := 0
+		for ; si < testCount; si++ {
+			mq, _ := clients.Get()
+			err := mq.Push(queue, msg)
+			clients.Put(mq)
+			if err != nil {
+				panic(err)
+			}
+		}
+		t.Logf("发送 %d 条数据, 耗时 %d 纳秒 \n", si, time.Since(startTime))
+	}
+
+	startTime1 := time.Now()
+	wg.Add(testCount * 10)
+	for i := 0; i < 10; i++ {
+		go func() {
+			mq, _ := clients.Get()
+			msgs, err := mq.Sub(queue)
+			clients.Put(mq)
+			if err != nil {
+				panic(err)
+			}
+			for msg := range msgs {
+				fmt.Println(string(msg.Data))
+				wg.Done()
+			}
+		}()
+	}
+	wg.Wait()
+	t.Logf("消费 %d 条数据, 耗时 %d 纳秒 \n", testCount, time.Since(startTime1))
+}
+
+func TestMqPool1(t *testing.T) {
+	queue := &Queue{Name: "hdf.queue1.test"}
+	// exchange := &Exchange{Name: "hdf.exchange.test"}
+
+	ex := &Exchange{
+		Name:       "hdf.exchange1.test",
+		Kind:       ExchangeDirect,
+		Durable:    true,
+		AutoDelete: false,
+		Internal:   false,
+		NoWait:     false,
+		Args:       nil,
+		IsDeclare:  false,
+	}
+
+	clients, err := NewClients("amqp://admin:admin@10.229.250.5:5673/", ex, 10)
+	if err != nil {
+		panic(err)
+	}
+
+	testCount := 100
+
+	startTime := time.Now()
+
+	wg := sync.WaitGroup{}
+	for i := 0; i < 10; i++ {
+		si := 0
+		for ; si < testCount; si++ {
+			data := fmt.Sprintf("i:%d, si:%d", i, si)
+			msg := &Message{
+				Data: []byte(data),
+			}
+			err := clients.Push(queue, msg)
+			if err != nil {
+				panic(err)
+			}
+		}
+		t.Logf("发送 %d 条数据, 耗时 %d 纳秒 \n", si, time.Since(startTime))
+	}
+
+	startTime1 := time.Now()
+	wg.Add(testCount * 10)
+	for i := 0; i < 10; i++ {
+		go func(j int) {
+			msgs, err := clients.Sub(queue)
+			if err != nil {
+				panic(err)
+			}
+			for msg := range msgs {
+				fmt.Printf("p :%d, data:%s\n", j, string(msg.Data))
+				wg.Done()
+			}
+		}(i)
+	}
+	wg.Wait()
+	t.Logf("消费 %d 条数据, 耗时 %d 纳秒 \n", testCount, time.Since(startTime1))
 }
