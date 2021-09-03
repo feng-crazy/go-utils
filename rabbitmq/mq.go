@@ -66,6 +66,13 @@ func (mq *MQ) connect() error {
 	return nil
 }
 
+func (mq *MQ) Close() {
+	_ = mq.Client.Close()
+	_ = mq.Channel.Close()
+	mq.Client = nil
+	mq.Channel = nil
+}
+
 func (mq *MQ) reconnect() {
 	mq.retrying = true
 

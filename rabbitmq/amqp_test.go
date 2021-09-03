@@ -283,7 +283,7 @@ func TestMqPool(t *testing.T) {
 }
 
 func TestMqPool1(t *testing.T) {
-	queue := &Queue{Name: "hdf.queue1.test"}
+
 	// exchange := &Exchange{Name: "hdf.exchange.test"}
 
 	ex := &Exchange{
@@ -309,11 +309,13 @@ func TestMqPool1(t *testing.T) {
 	wg := sync.WaitGroup{}
 	for i := 0; i < 10; i++ {
 		si := 0
+		queue := &Queue{Name: "hdf.queue1.test"}
 		for ; si < testCount; si++ {
 			data := fmt.Sprintf("i:%d, si:%d", i, si)
 			msg := &Message{
 				Data: []byte(data),
 			}
+
 			err := clients.Push(queue, msg)
 			if err != nil {
 				panic(err)
@@ -325,6 +327,7 @@ func TestMqPool1(t *testing.T) {
 	startTime1 := time.Now()
 	wg.Add(testCount * 10)
 	for i := 0; i < 10; i++ {
+		queue := &Queue{Name: "hdf.queue1.test"}
 		go func(j int) {
 			msgs, err := clients.Sub(queue)
 			if err != nil {
