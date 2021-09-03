@@ -80,3 +80,16 @@ func (c *Clients) Get() (*MQ, error) {
 func (c *Clients) Put(client *MQ) {
 	c.MqClients <- client
 }
+
+func (c *Clients) Close() error {
+	for c.MaxClient > 0 {
+		client, err := c.Get()
+		if err != nil {
+			logrus.Error(err)
+			return err
+		}
+		client.Close()
+		c.MaxClient--
+	}
+	return nil
+}
