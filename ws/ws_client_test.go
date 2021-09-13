@@ -7,21 +7,16 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/sirupsen/logrus"
-
-	"github.com/feng-crazy/go-utils/clock"
 )
 
 func TestWsClient(t *testing.T) {
-	timeout := clock.GetNowInMilli() + 30000
-	deadline := clock.TimeFromUnixMilli(timeout)
 
 	client := &Client{
-		Scheme:        "ws",
-		Host:          "localhost:9999",
-		Path:          "/echo",
-		ReadDeadline:  deadline,
-		WriteDeadline: deadline,
-		conn:          nil,
+		Scheme: "ws",
+		Host:   "localhost:9999",
+		Path:   "/echo",
+
+		conn: nil,
 	}
 
 	err := client.Connect()
@@ -30,13 +25,19 @@ func TestWsClient(t *testing.T) {
 	}
 	defer client.DisConnect()
 
-	sendMsg := time.Now().String()
-	fmt.Println(sendMsg)
-	msgType, msg, err := client.Request(websocket.TextMessage, []byte(sendMsg))
-	if err != nil {
-		logrus.Error(err)
+	for {
+		sendMsg := time.Now().String()
+		fmt.Println("sendMsg:", sendMsg)
+		msgType, msg, err := client.Request(websocket.BinaryMessage, []byte(sendMsg))
+		if err != nil {
+			logrus.Error(err)
+		}
+
+		fmt.Println("msgType:", msgType)
+		fmt.Println("recvMsg:", string(msg))
+
+		time.Sleep(3 * time.Second)
+		fmt.Println()
 	}
 
-	fmt.Println(msgType)
-	fmt.Println(string(msg))
 }

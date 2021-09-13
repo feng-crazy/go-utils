@@ -9,12 +9,10 @@ import (
 )
 
 type Client struct {
-	Scheme        string
-	Host          string // host or host:port
-	Path          string // path (relative paths may omit leading slash)
-	ReadDeadline  time.Time
-	WriteDeadline time.Time
-	conn          *websocket.Conn
+	Scheme string
+	Host   string // host or host:port
+	Path   string // path (relative paths may omit leading slash)
+	conn   *websocket.Conn
 }
 
 func NewClient(scheme, host, path string) Client {
@@ -35,21 +33,37 @@ func (t *Client) Connect() error {
 		return err
 	}
 
-	err = t.conn.SetReadDeadline(t.ReadDeadline)
-	if err != nil {
-		logrus.Error("SetReadDeadline err:", err)
-		return err
-	}
-
-	err = t.conn.SetWriteDeadline(t.WriteDeadline)
-	if err != nil {
-		logrus.Error("SetWriteDeadline err:", err)
-		return err
-	}
 	return nil
 }
 
 func (t *Client) Request(reqMsgType int, reqMsg []byte) (msgType int, msg []byte, err error) {
+	err = t.conn.WriteMessage(reqMsgType, reqMsg)
+	if err != nil {
+		logrus.Error("WriteMessage err:", err)
+		return
+	}
+
+	msgType, msg, err = t.conn.ReadMessage()
+	if err != nil {
+		logrus.Error("ReadMessage err:", err)
+		return
+	}
+	return
+}
+
+func (t *Client) RequestWithTimeout(reqMsgType int, reqMsg []byte, timeout time.Duration) (msgType int, msg []byte, err error) {
+	err = t.conn.SetReadDeadline(time.Now().Add(timeout))
+	if err != nil {
+		logrus.Error("SetReadDeadline err:", err)
+		return
+	}
+
+	err = t.conn.SetWriteDeadline(time.Now().Add(timeout))
+	if err != nil {
+		logrus.Error("SetWriteDeadline err:", err)
+		return
+	}
+
 	err = t.conn.WriteMessage(reqMsgType, reqMsg)
 	if err != nil {
 		logrus.Error("WriteMessage err:", err)
