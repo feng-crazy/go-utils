@@ -1,9 +1,10 @@
 package str
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
+
+	json "github.com/json-iterator/go"
 )
 
 func ArrIntToString(arr []int) (result string, err error) {

@@ -1,10 +1,11 @@
 package clock
 
 import (
-	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
+
+	json "github.com/json-iterator/go"
 )
 
 type Order struct {

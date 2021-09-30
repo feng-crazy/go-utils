@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"crypto/md5"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -14,6 +13,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	json "github.com/json-iterator/go"
 
 	"gopkg.in/yaml.v3"
 )

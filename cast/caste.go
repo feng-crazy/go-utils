@@ -1,7 +1,6 @@
 package cast
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"html/template"
@@ -9,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	json "github.com/json-iterator/go"
 )
 
 var errNegativeNotAllowed = errors.New("unable to cast negative value")

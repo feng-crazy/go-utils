@@ -1,7 +1,7 @@
 package rabbitmq
 
 import (
-	"encoding/json"
+	json "github.com/json-iterator/go"
 )
 
 // Message 消息体

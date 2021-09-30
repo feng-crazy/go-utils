@@ -3,11 +3,12 @@ package cast
 import (
 	"bytes"
 	"encoding/binary"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
 	"strconv"
+
+	json "github.com/json-iterator/go"
 )
 
 type DataConv struct {

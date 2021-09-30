@@ -1,9 +1,10 @@
 package hmap
 
 import (
-	"encoding/json"
 	"reflect"
 	"strings"
+
+	json "github.com/json-iterator/go"
 )
 
 func Struct2Map(obj interface{}) map[string]interface{} {

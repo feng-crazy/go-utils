@@ -1,8 +1,9 @@
 package hmap
 
 import (
-	"encoding/json"
 	"errors"
+
+	json "github.com/json-iterator/go"
 )
 
 func GetMapValue(mapStr, key string) (interface{}, error) {

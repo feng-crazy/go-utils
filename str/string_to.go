@@ -1,9 +1,10 @@
 package str
 
 import (
-	"encoding/json"
 	"errors"
 	"strconv"
+
+	json "github.com/json-iterator/go"
 )
 
 func StringTo(s string, t string) (value interface{}, err error) {
