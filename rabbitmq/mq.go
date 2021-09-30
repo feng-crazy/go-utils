@@ -17,6 +17,7 @@ type MQ struct {
 	// notifyClose chan *amqp.Error
 	subQueues []*Queue // 已注册为消费者的通道
 	retrying  bool
+	closed    bool
 }
 
 // Init 初始化
@@ -67,10 +68,10 @@ func (mq *MQ) connect() error {
 }
 
 func (mq *MQ) Close() {
+	mq.closed = true
 	_ = mq.Client.Close()
 	_ = mq.Channel.Close()
-	mq.Client = nil
-	mq.Channel = nil
+
 }
 
 func (mq *MQ) reconnect() {
@@ -81,11 +82,19 @@ func (mq *MQ) reconnect() {
 		closeCh := make(chan *amqp.Error)
 		mq.Channel.NotifyClose(closeCh)
 		err := <-closeCh // 如果连接丢失这里就不会阻塞
+		// err 等于nil 为手动关闭
+		if err == nil {
+			fmt.Printf("rabbitmq connection is shutdown: %v", err)
+			return
+		}
+		if mq.closed == true {
+			fmt.Printf("rabbitmq connection is close: %v", err)
+			return
+		}
+
 		fmt.Printf("rabbitmq connection is close: %v, retrying...\n", err)
 		mq.Client.Close()
 		mq.Channel.Close()
-		mq.Client = nil
-		mq.Channel = nil
 	}
 
 	err := mq.connect()
