@@ -15,9 +15,9 @@ import (
 
 // status enum
 const (
-	statusOnline       = iota
-	statusOffline      = iota
-	statusReconnecting = iota
+	StatusOnline       = iota
+	StatusOffline      = iota
+	StatusReconnecting = iota
 )
 
 // ----------------------------------------------------------------------------
@@ -73,7 +73,7 @@ func DialTCP(network string, laddr, raddr *net.TCPAddr) (*TCPClient, error) {
 		TCPConn: conn,
 
 		lock:   sync.RWMutex{},
-		status: 0,
+		status: StatusOnline,
 
 		maxRetries:    10,
 		retryInterval: 10 * time.Millisecond,
@@ -130,10 +130,21 @@ func (c *TCPClient) GetRetryInterval() time.Duration {
 	return c.retryInterval
 }
 
+func (c *TCPClient) GetStatus() int32 {
+	return atomic.LoadInt32(&c.status)
+}
+
 func (c *TCPClient) SetReConnectedCb(cb func()) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	c.reconnectedCb = cb
+}
+
+func (c *TCPClient) Close() error {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+	atomic.StoreInt32(&c.status, StatusOffline)
+	return c.TCPConn.Close()
 }
 
 func (c *TCPClient) Reconnect() error {
@@ -151,7 +162,7 @@ func (c *TCPClient) reconnect() error {
 	// set the shared status to 'reconnecting'
 	// if it's already the case, return early, something's already trying to
 	// reconnect
-	if !atomic.CompareAndSwapInt32(&c.status, statusOffline, statusReconnecting) {
+	if !atomic.CompareAndSwapInt32(&c.status, StatusOffline, StatusReconnecting) {
 		return nil
 	}
 
@@ -159,7 +170,7 @@ func (c *TCPClient) reconnect() error {
 	conn, err := net.DialTCP(raddr.Network(), nil, raddr.(*net.TCPAddr))
 	if err != nil {
 		// reset shared status to offline
-		defer atomic.StoreInt32(&c.status, statusOffline)
+		defer atomic.StoreInt32(&c.status, StatusOffline)
 		switch e := err.(type) {
 		case *net.OpError:
 			switch e2 := e.Err.(type) {
@@ -188,7 +199,7 @@ func (c *TCPClient) reconnect() error {
 	c.TCPConn = conn
 
 	// we're back online, set shared status accordingly
-	atomic.StoreInt32(&c.status, statusOnline)
+	atomic.StoreInt32(&c.status, StatusOnline)
 	if c.reconnectedCb != nil {
 		c.reconnectedCb()
 	}
@@ -206,7 +217,7 @@ func (c *TCPClient) Read(b []byte) (int, error) {
 	defer c.lock.RUnlock()
 
 	for i := 0; i < c.maxRetries; i++ {
-		if atomic.LoadInt32(&c.status) == statusOnline {
+		if atomic.LoadInt32(&c.status) == StatusOnline {
 			n, err := c.TCPConn.Read(b)
 			if err == nil {
 				return n, err
@@ -216,13 +227,13 @@ func (c *TCPClient) Read(b []byte) (int, error) {
 				switch e2 := e.Err.(type) {
 				case syscall.Errno:
 					if isConnResetError(e2) {
-						atomic.StoreInt32(&c.status, statusOffline)
+						atomic.StoreInt32(&c.status, StatusOffline)
 					} else {
 						return n, err
 					}
 				case *os.SyscallError:
 					if e3, ok := e2.Err.(syscall.Errno); ok && isConnResetError(e3) {
-						atomic.StoreInt32(&c.status, statusOffline)
+						atomic.StoreInt32(&c.status, StatusOffline)
 					} else {
 						return n, err
 					}
@@ -231,12 +242,12 @@ func (c *TCPClient) Read(b []byte) (int, error) {
 				}
 			default:
 				if err.Error() == "EOF" {
-					atomic.StoreInt32(&c.status, statusOffline)
+					atomic.StoreInt32(&c.status, StatusOffline)
 				} else {
 					return n, err
 				}
 			}
-		} else if atomic.LoadInt32(&c.status) == statusOffline {
+		} else if atomic.LoadInt32(&c.status) == StatusOffline {
 			if err := c.reconnect(); err != nil {
 				return -1, err
 			}
@@ -260,7 +271,7 @@ func (c *TCPClient) ReadFrom(r io.Reader) (int64, error) {
 	defer c.lock.RUnlock()
 
 	for i := 0; i < c.maxRetries; i++ {
-		if atomic.LoadInt32(&c.status) == statusOnline {
+		if atomic.LoadInt32(&c.status) == StatusOnline {
 			n, err := c.TCPConn.ReadFrom(r)
 			if err == nil {
 				return n, err
@@ -270,13 +281,13 @@ func (c *TCPClient) ReadFrom(r io.Reader) (int64, error) {
 				switch e2 := e.Err.(type) {
 				case syscall.Errno:
 					if isConnResetError(e2) {
-						atomic.StoreInt32(&c.status, statusOffline)
+						atomic.StoreInt32(&c.status, StatusOffline)
 					} else {
 						return n, err
 					}
 				case *os.SyscallError:
 					if e3, ok := e2.Err.(syscall.Errno); ok && isConnResetError(e3) {
-						atomic.StoreInt32(&c.status, statusOffline)
+						atomic.StoreInt32(&c.status, StatusOffline)
 					} else {
 						return n, err
 					}
@@ -285,12 +296,12 @@ func (c *TCPClient) ReadFrom(r io.Reader) (int64, error) {
 				}
 			default:
 				if err.Error() == "EOF" {
-					atomic.StoreInt32(&c.status, statusOffline)
+					atomic.StoreInt32(&c.status, StatusOffline)
 				} else {
 					return n, err
 				}
 			}
-		} else if atomic.LoadInt32(&c.status) == statusOffline {
+		} else if atomic.LoadInt32(&c.status) == StatusOffline {
 			if err := c.reconnect(); err != nil {
 				return -1, err
 			}
@@ -314,7 +325,7 @@ func (c *TCPClient) Write(b []byte) (int, error) {
 	defer c.lock.RUnlock()
 
 	for i := 0; i < c.maxRetries; i++ {
-		if atomic.LoadInt32(&c.status) == statusOnline {
+		if atomic.LoadInt32(&c.status) == StatusOnline {
 			n, err := c.TCPConn.Write(b)
 			if err == nil {
 				return n, err
@@ -324,13 +335,13 @@ func (c *TCPClient) Write(b []byte) (int, error) {
 				switch e2 := e.Err.(type) {
 				case syscall.Errno:
 					if isConnResetError(e2) {
-						atomic.StoreInt32(&c.status, statusOffline)
+						atomic.StoreInt32(&c.status, StatusOffline)
 					} else {
 						return n, err
 					}
 				case *os.SyscallError:
 					if e3, ok := e2.Err.(syscall.Errno); ok && isConnResetError(e3) {
-						atomic.StoreInt32(&c.status, statusOffline)
+						atomic.StoreInt32(&c.status, StatusOffline)
 					} else {
 						return n, err
 					}
@@ -340,14 +351,14 @@ func (c *TCPClient) Write(b []byte) (int, error) {
 			default:
 				return n, err
 			}
-		} else if atomic.LoadInt32(&c.status) == statusOffline {
+		} else if atomic.LoadInt32(&c.status) == StatusOffline {
 			if err := c.reconnect(); err != nil {
 				return -1, err
 			}
 		}
 
 		// exponential backoff
-		if i < (c.maxRetries-1) && atomic.LoadInt32(&c.status) == statusOffline {
+		if i < (c.maxRetries-1) && atomic.LoadInt32(&c.status) == StatusOffline {
 			time.Sleep(c.retryInterval * time.Duration(math.Pow(2, float64(i))))
 		}
 	}
