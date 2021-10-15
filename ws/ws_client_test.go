@@ -11,15 +11,15 @@ import (
 
 func TestWsClient(t *testing.T) {
 
-	client := &Client{
-		Scheme: "ws",
-		Host:   "localhost:9999",
-		Path:   "/echo",
+	// client := &Client{
+	// 	Scheme: "ws",
+	// 	Host:   "localhost:9999",
+	// 	Path:   "/echo",
+	//
+	// 	Conn: nil,
+	// }
 
-		Conn: nil,
-	}
-
-	// client := NewClient("ws", "10.0.128.5:14305","/opensmart/api/1.0/login?user=system")
+	client := NewClient("ws", "10.0.128.5:14305", "/opensmart/api/1.0/login?user=system")
 
 	err := client.Connect()
 	if err != nil {

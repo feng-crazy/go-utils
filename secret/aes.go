@@ -56,6 +56,7 @@ func EncryptCBCPKCS7(key string, encryptionString []byte) ([]byte, error) {
 	blockSize := block.BlockSize()
 	plaintext = PKCS7Padding(plaintext, blockSize)
 	// plaintext = ZeroPadding(plaintext, block.BlockSize())
+	// plaintext = PKCS5Padding(plaintext)
 	// NewCBCEncrypter返回一个BlockMode，它使用给定的Block以密码块链接模式加密。 iv的长度必须与块的大小相同。commonIV
 	// blockMode := cipher.NewCBCEncrypter(block, commonIV)
 	blockMode := cipher.NewCBCEncrypter(block, keyByte[:blockSize])
@@ -68,8 +69,8 @@ func EncryptCBCPKCS7(key string, encryptionString []byte) ([]byte, error) {
 	// return hex.EncodeToString(crypted), err
 	// 加密 后的字符串转为base64的字符串 返回
 
-	buf := make([]byte, base64.URLEncoding.EncodedLen(len(crypted)))
-	base64.URLEncoding.Encode(buf, crypted)
+	buf := make([]byte, base64.StdEncoding.EncodedLen(len(crypted)))
+	base64.StdEncoding.Encode(buf, crypted)
 	return buf, err
 }
 
