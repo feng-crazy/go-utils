@@ -101,7 +101,11 @@ func ZeroPadding(ciphertext []byte, blockSize int) []byte {
 func ZeroUnPadding(origData []byte) []byte {
 	length := len(origData)
 	unpadding := int(origData[length-1])
-	return origData[:(length - unpadding)]
+	seg := length - unpadding
+	if seg < 0 {
+		return origData
+	}
+	return origData[:seg]
 }
 
 func PKCS5Padding(ciphertext []byte) []byte {
@@ -113,7 +117,11 @@ func PKCS5Padding(ciphertext []byte) []byte {
 func PKCS5UnPadding(origData []byte) []byte {
 	length := len(origData)
 	unpadding := int(origData[length-1])
-	return origData[:(length - unpadding)]
+	seg := length - unpadding
+	if seg < 0 {
+		return origData
+	}
+	return origData[:seg]
 }
 
 // 使用PKCS7进行填充，IOS也是7
@@ -129,7 +137,11 @@ func PKCS7Padding(ciphertext []byte, blockSize int) []byte {
 func PKCS7UnPadding(origData []byte) []byte {
 	length := len(origData)
 	unpadding := int(origData[length-1])
-	return origData[:(length - unpadding)]
+	seg := length - unpadding
+	if seg < 0 {
+		return origData
+	}
+	return origData[:seg]
 
 }
 
