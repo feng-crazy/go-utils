@@ -66,7 +66,7 @@ func (sm *StateMachine) Call() {
 	return
 }
 
-func (sm *StateMachine) Start() {
+func (sm *StateMachine) StartWithTicker() {
 	sm.exited = false
 	sm.ticker = time.NewTicker(sm.tick)
 
@@ -84,8 +84,30 @@ func (sm *StateMachine) Start() {
 	}()
 }
 
-func (sm *StateMachine) Stop() {
+func (sm *StateMachine) StopWithTicker() {
 	sm.stopC <- struct{}{}
+}
+
+func (sm *StateMachine) Start() {
+	go func() {
+		for {
+			sm.mu.Lock()
+			if sm.exited {
+				sm.mu.Unlock()
+				return
+			}
+			sm.mu.Unlock()
+			sm.Call()
+			time.Sleep(sm.tick)
+		}
+
+	}()
+}
+
+func (sm *StateMachine) Stop() {
+	sm.mu.Lock()
+	sm.exited = true
+	sm.mu.Unlock()
 }
 
 // 实例化
