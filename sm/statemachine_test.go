@@ -1,4 +1,4 @@
-package statemachine
+package sm
 
 import (
 	"fmt"
