@@ -5,10 +5,78 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"encoding/base64"
+	"errors"
 	"strconv"
 	"strings"
 	"time"
 )
+
+// ase解密函数
+func DecryptCBCPKCS5(key string, decryptByte []byte, iv []byte) ([]byte, error) {
+	// 16进制转bytes
+	// b, err :=hex.DecodeString(decryptString)
+	//    base64的字符串转为byte  slice
+	dBuf := make([]byte, base64.StdEncoding.DecodedLen(len(decryptByte)))
+	n, err := base64.StdEncoding.Decode(dBuf, decryptByte)
+	if err != nil {
+		return nil, err
+	}
+	dBuf = dBuf[:n]
+
+	keyByte := []byte(key)
+	//  创建解码算法
+	block, err := aes.NewCipher(keyByte)
+	if err != nil {
+		return nil, err
+	}
+	// 获取block块长度
+	blockSize := block.BlockSize()
+	if len(iv) != blockSize {
+		return nil, errors.New("BlockSize 必须和iv的长度一致")
+	}
+	// 获取blockMode
+	// blockMode := cipher.NewCBCDecrypter(block, commonIV)
+	blockMode := cipher.NewCBCDecrypter(block, iv)
+	// 创建接收数据的bytes
+	origData := make([]byte, len(dBuf))
+	// origData := crypted
+	// CryptBlocks加密或解密一些块。 src的长度必须是块大小的倍数。 Dst和src可能指向相同的内存。
+	blockMode.CryptBlocks(origData, dBuf)
+	origData = PKCS7UnPadding(origData)
+	// origData = ZeroUnPadding(origData)
+	return origData, nil
+}
+
+// ase 加密函数
+func EncryptCBCPKCS5(key string, encryptionString []byte, iv []byte) ([]byte, error) {
+	plaintext := []byte(encryptionString)
+	keyByte := []byte(key)
+	//	创建加密算法
+	block, err := aes.NewCipher(keyByte)
+	if err != nil {
+		return nil, err
+	}
+	// 获取block块长度
+	blockSize := block.BlockSize()
+	plaintext = PKCS7Padding(plaintext, blockSize)
+	// plaintext = ZeroPadding(plaintext, block.BlockSize())
+	// plaintext = PKCS5Padding(plaintext)
+	// NewCBCEncrypter返回一个BlockMode，它使用给定的Block以密码块链接模式加密。 iv的长度必须与块的大小相同。commonIV
+	// blockMode := cipher.NewCBCEncrypter(block, commonIV)
+	blockMode := cipher.NewCBCEncrypter(block, iv)
+	// 创建接收byte  slice
+	crypted := make([]byte, len(plaintext))
+	// 根据CryptBlocks方法的说明，如下方式初始化crypted也可以
+	// crypted := origData
+	blockMode.CryptBlocks(crypted, plaintext)
+	// 转16进制 字符串
+	// return hex.EncodeToString(crypted), err
+	// 加密 后的字符串转为base64的字符串 返回
+
+	buf := make([]byte, base64.StdEncoding.EncodedLen(len(crypted)))
+	base64.StdEncoding.Encode(buf, crypted)
+	return buf, err
+}
 
 // ase解密函数
 func DecryptCBCPKCS7(key string, decryptByte []byte) ([]byte, error) {
@@ -99,22 +167,6 @@ func ZeroPadding(ciphertext []byte, blockSize int) []byte {
 }
 
 func ZeroUnPadding(origData []byte) []byte {
-	length := len(origData)
-	unpadding := int(origData[length-1])
-	seg := length - unpadding
-	if seg < 0 {
-		return origData
-	}
-	return origData[:seg]
-}
-
-func PKCS5Padding(ciphertext []byte) []byte {
-	padding := 8 - len(ciphertext)%8
-	padtext := bytes.Repeat([]byte{byte(padding)}, padding)
-	return append(ciphertext, padtext...)
-}
-
-func PKCS5UnPadding(origData []byte) []byte {
 	length := len(origData)
 	unpadding := int(origData[length-1])
 	seg := length - unpadding
