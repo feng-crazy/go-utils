@@ -34,3 +34,16 @@ func TestStruct2MapWithGorm(t *testing.T) {
 	fmt.Println(m, err)
 
 }
+
+func TestStruct2MapWithJson(t *testing.T) {
+	data := struct {
+		P1 int     `json:"p1"`
+		P2 bool    `json:"p2"`
+		P3 float64 `json:"p3"`
+	}{
+		P1: 0,
+		P2: false,
+		P3: 0,
+	}
+	fmt.Println(Struct2MapWithJson(data))
+}
