@@ -20,3 +20,16 @@ func TrimStringSlice(raw []string) []string {
 
 	return arr
 }
+
+func ExtractCN(s string) string {
+	r := []rune(s)
+
+	cnstr := ""
+	for i := 0; i < len(r); i++ {
+		if r[i] <= 40869 && r[i] >= 19968 {
+			cnstr = cnstr + string(r[i])
+		}
+
+	}
+	return cnstr
+}
