@@ -187,6 +187,9 @@ var pubMu sync.Mutex
 // msg 消息,
 // exchanges 交换机，可以用多个交换机多次发送，默认使用初始化时指定的交换机
 func (mq *MQ) Push(q *Queue, msg *Message, exchanges ...*Exchange) error {
+	if mq.closed == true || mq.Channel == nil {
+		return nil
+	}
 	pubMu.Lock()
 	defer pubMu.Unlock()
 
@@ -255,6 +258,9 @@ func (mq *MQ) Push(q *Queue, msg *Message, exchanges ...*Exchange) error {
 // msg 消息,
 // exchanges 交换机，可以用多个交换机多次发送，默认使用初始化时指定的交换机
 func (mq *MQ) Pub(routingKey string, msg *Message, exchanges ...*Exchange) error {
+	if mq.closed == true || mq.Channel == nil {
+		return nil
+	}
 	pubMu.Lock()
 	defer pubMu.Unlock()
 
