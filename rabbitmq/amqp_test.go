@@ -16,7 +16,7 @@ func TestAmqp(t *testing.T) {
 	}
 
 	mq, err := New(&Config{
-		Addr:         "amqp://admin:admin@10.229.250.5:5673/",
+		Addr:         "amqp://admin:admin@10.229.249.112:5673/",
 		ExchangeName: "hdf.exchange1.test",
 	})
 	if err != nil {
@@ -239,7 +239,7 @@ func TestMqPool(t *testing.T) {
 		IsDeclare:  false,
 	}
 
-	clients, err := NewClients("amqp://admin:admin@10.229.250.5:5673/", ex, 10)
+	clients, err := NewClients("amqp://admin:admin@10.229.249.112:5673/", ex, 10)
 	if err != nil {
 		panic(err)
 	}
@@ -297,7 +297,7 @@ func TestMqPool1(t *testing.T) {
 		IsDeclare:  false,
 	}
 
-	clients, err := NewClients("amqp://admin:admin@10.229.250.5:5673/", ex, 10)
+	clients, err := NewClients("amqp://admin:admin@10.229.249.112:5673/", ex, 10)
 	if err != nil {
 		panic(err)
 	}
@@ -341,4 +341,83 @@ func TestMqPool1(t *testing.T) {
 	}
 	wg.Wait()
 	t.Logf("消费 %d 条数据, 耗时 %d 纳秒 \n", testCount, time.Since(startTime1))
+}
+
+func TestMqPus(t *testing.T) {
+	ex := &Exchange{
+		Name:       "hdf.exchange1.test",
+		Kind:       ExchangeDirect,
+		Durable:    true,
+		AutoDelete: false,
+		Internal:   false,
+		NoWait:     false,
+		Args:       nil,
+		IsDeclare:  false,
+	}
+
+	clients, err := NewClients("amqp://admin:admin@10.229.249.112:5673/", ex, 1)
+	if err != nil {
+		panic(err)
+	}
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	for i := 0; i < 1; i++ {
+
+		queue := &Queue{Name: "hdf.queue1.test"}
+		go func(i int) {
+			si := 0
+			for {
+				si++
+				data := fmt.Sprintf("i:%d, si:%d", i, si)
+				msg := &Message{
+					Data: []byte(data),
+				}
+
+				err := clients.Push(queue, msg)
+				if err != nil {
+					fmt.Println(err)
+				}
+				time.Sleep(100 * time.Millisecond)
+			}
+		}(i)
+	}
+
+	wg.Wait()
+}
+
+func TestMqSubs(t *testing.T) {
+	ex := &Exchange{
+		Name:       "hdf.exchange1.test",
+		Kind:       ExchangeDirect,
+		Durable:    true,
+		AutoDelete: false,
+		Internal:   false,
+		NoWait:     false,
+		Args:       nil,
+		IsDeclare:  false,
+	}
+
+	clients, err := NewClients("amqp://admin:admin@10.229.249.112:5673/", ex, 1)
+	if err != nil {
+		panic(err)
+	}
+
+	wg := sync.WaitGroup{}
+
+	wg.Add(1)
+
+	queue := &Queue{Name: "hdf.queue1.test"}
+	go func(j int) {
+		msgs, err := clients.Sub(queue)
+		if err != nil {
+			panic(err)
+		}
+		for msg := range msgs {
+			fmt.Printf("p :%d, data:%s\n", j, string(msg.Data))
+		}
+	}(1)
+
+	wg.Wait()
+
 }

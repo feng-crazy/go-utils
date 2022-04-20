@@ -1,10 +1,12 @@
 package rabbitmq
 
 import (
-	"fmt"
+	"errors"
 	"sync"
+	"sync/atomic"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"github.com/streadway/amqp"
 )
 
@@ -15,9 +17,11 @@ type MQ struct {
 	Exchange *Exchange
 	Consumer *Consumer
 	// notifyClose chan *amqp.Error
-	subQueues []*Queue // 已注册为消费者的通道
-	retrying  bool
-	closed    bool
+	subQueues     []*Queue         // 已注册为消费者的通道
+	clientCloseCh chan *amqp.Error // 监听连接断开消息通道
+	chCloseCh     chan *amqp.Error // 监听连接断开消息通道
+	retrying      atomic.Value
+	closed        atomic.Value
 }
 
 // Init 初始化
@@ -58,53 +62,59 @@ func (mq *MQ) connect() error {
 		q.q = nil
 		mq.bindMQChan(q)
 	}
-
+	mq.retrying.Store(false)
 	// 断线重连
-	if !mq.retrying {
-		go mq.reconnect()
-	}
-
+	go mq.reconnect()
 	return nil
 }
 
 func (mq *MQ) Close() {
-	mq.closed = true
-	_ = mq.Client.Close()
+	mq.closed.Store(true)
 	_ = mq.Channel.Close()
-
+	_ = mq.Client.Close()
 }
 
 func (mq *MQ) reconnect() {
-	mq.retrying = true
-
 	if mq.Client != nil && mq.Channel != nil {
 		// 已经连上了，监听关闭消息
-		closeCh := make(chan *amqp.Error)
-		mq.Channel.NotifyClose(closeCh)
-		err := <-closeCh // 如果连接丢失这里就不会阻塞
-		// err 等于nil 为手动关闭
-		if err == nil {
-			fmt.Printf("rabbitmq connection is shutdown: %v", err)
-			return
-		}
-		if mq.closed == true {
-			fmt.Printf("rabbitmq connection is close: %v", err)
-			return
-		}
+		mq.clientCloseCh = make(chan *amqp.Error)
+		mq.chCloseCh = make(chan *amqp.Error)
+		mq.Client.NotifyClose(mq.clientCloseCh)
+		mq.Channel.NotifyClose(mq.chCloseCh)
 
-		fmt.Printf("rabbitmq connection is close: %v, retrying...\n", err)
-		mq.Client.Close()
-		mq.Channel.Close()
+		// 如果连接丢失这里就不会阻塞
+		var amqpErr *amqp.Error
+		select {
+		case amqpErr = <-mq.clientCloseCh:
+			break
+		case amqpErr = <-mq.chCloseCh:
+			break
+		}
+		// 这里是手动关闭,不进行重连
+		if mq.closed.Load() == true {
+			logrus.Printf("rabbitmq connection is close: %v", amqpErr)
+			return
+		}
+		mq.retrying.Store(true)
+		logrus.Printf("rabbitmq connection is close: %v, retrying...\n", amqpErr)
+		// err := mq.Channel.Close()
+		// if err != nil {
+		// 	logrus.Printf("rabbitmq Channel close err: %v", err)
+		// }
+		// err = mq.Client.Close()
+		// if err != nil {
+		// 	logrus.Printf("rabbitmq Client close err: %v", err)
+		// }
 	}
+
+	time.Sleep(3 * time.Second)
 
 	err := mq.connect()
 	if err != nil {
-		fmt.Printf("rabbitmq connection retry fail: %v next retrying...\n", err)
+		logrus.Printf("rabbitmq connection retry fail: %v next retrying...\n", err)
 	} else {
-		fmt.Printf("rabbitmq connection retry ok\n")
+		logrus.Printf("rabbitmq connection retry ok\n")
 	}
-	time.Sleep(2 * time.Second)
-	mq.reconnect()
 }
 
 var subMu sync.Mutex
@@ -187,9 +197,25 @@ var pubMu sync.Mutex
 // msg 消息,
 // exchanges 交换机，可以用多个交换机多次发送，默认使用初始化时指定的交换机
 func (mq *MQ) Push(q *Queue, msg *Message, exchanges ...*Exchange) error {
-	if mq.closed == true || mq.Channel == nil {
-		return nil
+	if mq.Client.IsClosed() {
+		return errors.New("mq 连接被关闭")
 	}
+
+	if mq.closed.Load() == true || mq.retrying.Load() == true {
+		return errors.New("mq 连接已经关闭或者正在重连")
+	}
+
+	// if mq.Client.IsClosed(){
+	// 	err := amqp.Error{
+	// 		Code:    499,
+	// 		Reason:  "mq 连接未知原因关闭，尝试手动重连",
+	// 		Server:  false,
+	// 		Recover: false,
+	// 	}
+	// 	mq.closeCh <- &err
+	// 	return err
+	// }
+
 	pubMu.Lock()
 	defer pubMu.Unlock()
 
@@ -258,9 +284,25 @@ func (mq *MQ) Push(q *Queue, msg *Message, exchanges ...*Exchange) error {
 // msg 消息,
 // exchanges 交换机，可以用多个交换机多次发送，默认使用初始化时指定的交换机
 func (mq *MQ) Pub(routingKey string, msg *Message, exchanges ...*Exchange) error {
-	if mq.closed == true || mq.Channel == nil {
-		return nil
+	if mq.Client.IsClosed() {
+		return errors.New("mq 连接被关闭")
 	}
+
+	if mq.closed.Load() == true || mq.retrying.Load() == true {
+		return errors.New("mq 连接已经关闭或者正在重连")
+	}
+
+	// if mq.Client.IsClosed(){
+	// 	err := amqp.Error{
+	// 		Code:    499,
+	// 		Reason:  "mq 连接未知原因关闭，尝试手动重连",
+	// 		Server:  false,
+	// 		Recover: false,
+	// 	}
+	// 	mq.closeCh <- &err
+	// 	return err
+	// }
+
 	pubMu.Lock()
 	defer pubMu.Unlock()
 
@@ -291,6 +333,9 @@ func (mq *MQ) Pub(routingKey string, msg *Message, exchanges ...*Exchange) error
 			},
 		)
 		if err != nil {
+			if mq.Client.IsClosed() {
+
+			}
 			return err
 		}
 	}
