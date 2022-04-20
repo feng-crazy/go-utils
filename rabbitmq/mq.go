@@ -29,10 +29,15 @@ type MQ struct {
 func (mq *MQ) Init() error {
 	mq.subQueues = []*Queue{}
 
+	mq.closed.Store(false)
+	mq.retrying.Store(false)
 	err := mq.connect()
 	if err != nil {
 		return err
 	}
+
+	// 断线重连处理
+	go mq.reconnect()
 
 	// 初始化默认交换机
 	err = mq.ExchangeDeclare(mq.Exchange)
@@ -46,11 +51,13 @@ func (mq *MQ) Init() error {
 func (mq *MQ) connect() error {
 	conn, err := amqp.Dial(mq.Addr)
 	if err != nil {
+		mq.Client = nil
 		return err
 	}
 	mq.Client = conn
 	channel, err := conn.Channel()
 	if err != nil {
+		mq.Channel = nil
 		return err
 	}
 	mq.Channel = channel
@@ -62,9 +69,8 @@ func (mq *MQ) connect() error {
 		q.q = nil
 		mq.bindMQChan(q)
 	}
+	// 连接成功
 	mq.retrying.Store(false)
-	// 断线重连
-	go mq.reconnect()
 	return nil
 }
 
@@ -75,45 +81,45 @@ func (mq *MQ) Close() {
 }
 
 func (mq *MQ) reconnect() {
-	if mq.Client != nil && mq.Channel != nil {
-		// 已经连上了，监听关闭消息
-		mq.clientCloseCh = make(chan *amqp.Error)
-		mq.chCloseCh = make(chan *amqp.Error)
-		mq.Client.NotifyClose(mq.clientCloseCh)
-		mq.Channel.NotifyClose(mq.chCloseCh)
+	for {
+		if mq.Client != nil && mq.Channel != nil && !mq.Client.IsClosed() {
+			// 已经连上了，监听关闭消息
+			mq.clientCloseCh = make(chan *amqp.Error)
+			mq.chCloseCh = make(chan *amqp.Error)
+			mq.Client.NotifyClose(mq.clientCloseCh)
+			mq.Channel.NotifyClose(mq.chCloseCh)
 
-		// 如果连接丢失这里就不会阻塞
-		var amqpErr *amqp.Error
-		select {
-		case amqpErr = <-mq.clientCloseCh:
-			break
-		case amqpErr = <-mq.chCloseCh:
-			break
+			// 如果连接丢失这里就不会阻塞
+			var amqpErr *amqp.Error
+			select {
+			case amqpErr = <-mq.clientCloseCh:
+				logrus.Printf("rabbitmq clientCloseCh err:%v\n", amqpErr)
+			case amqpErr = <-mq.chCloseCh:
+				logrus.Printf("rabbitmq chCloseCh err:%v\n", amqpErr)
+			}
+			mq.retrying.Store(true)
+
+			err := mq.Channel.Close()
+			if err != nil {
+				// logrus.Printf("rabbitmq Channel close err: %v", err)
+			}
+			err = mq.Client.Close()
+			if err != nil {
+				// logrus.Printf("rabbitmq Client close err: %v", err)
+			}
 		}
-		// 这里是手动关闭,不进行重连
-		if mq.closed.Load() == true {
-			logrus.Printf("rabbitmq connection is close: %v", amqpErr)
+
+		time.Sleep(3 * time.Second)
+		if mq.closed.Load() == false {
+			err := mq.connect()
+			if err != nil {
+				logrus.Printf("rabbitmq connection retry fail: %v next retrying...\n", err)
+			} else {
+				logrus.Printf("rabbitmq connection retry ok\n")
+			}
+		} else {
 			return
 		}
-		mq.retrying.Store(true)
-		logrus.Printf("rabbitmq connection is close: %v, retrying...\n", amqpErr)
-		// err := mq.Channel.Close()
-		// if err != nil {
-		// 	logrus.Printf("rabbitmq Channel close err: %v", err)
-		// }
-		// err = mq.Client.Close()
-		// if err != nil {
-		// 	logrus.Printf("rabbitmq Client close err: %v", err)
-		// }
-	}
-
-	time.Sleep(3 * time.Second)
-
-	err := mq.connect()
-	if err != nil {
-		logrus.Printf("rabbitmq connection retry fail: %v next retrying...\n", err)
-	} else {
-		logrus.Printf("rabbitmq connection retry ok\n")
 	}
 }
 
@@ -197,11 +203,11 @@ var pubMu sync.Mutex
 // msg 消息,
 // exchanges 交换机，可以用多个交换机多次发送，默认使用初始化时指定的交换机
 func (mq *MQ) Push(q *Queue, msg *Message, exchanges ...*Exchange) error {
-	if mq.Client.IsClosed() {
-		return errors.New("mq 连接被关闭")
+	if mq.Client == nil || mq.Channel == nil {
+		return errors.New("mq 未初始化")
 	}
 
-	if mq.closed.Load() == true || mq.retrying.Load() == true {
+	if mq.closed.Load() == true || mq.retrying.Load() == true || mq.Client.IsClosed() {
 		return errors.New("mq 连接已经关闭或者正在重连")
 	}
 
@@ -284,11 +290,11 @@ func (mq *MQ) Push(q *Queue, msg *Message, exchanges ...*Exchange) error {
 // msg 消息,
 // exchanges 交换机，可以用多个交换机多次发送，默认使用初始化时指定的交换机
 func (mq *MQ) Pub(routingKey string, msg *Message, exchanges ...*Exchange) error {
-	if mq.Client.IsClosed() {
-		return errors.New("mq 连接被关闭")
+	if mq.Client == nil || mq.Channel == nil {
+		return errors.New("mq 未初始化")
 	}
 
-	if mq.closed.Load() == true || mq.retrying.Load() == true {
+	if mq.closed.Load() == true || mq.retrying.Load() == true || mq.Client.IsClosed() {
 		return errors.New("mq 连接已经关闭或者正在重连")
 	}
 
