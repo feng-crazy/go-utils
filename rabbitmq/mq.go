@@ -118,6 +118,7 @@ func (mq *MQ) reconnect() {
 				logrus.Printf("rabbitmq connection retry ok\n")
 			}
 		} else {
+			mq.retrying.Store(false)
 			return
 		}
 	}
