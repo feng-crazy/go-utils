@@ -98,15 +98,6 @@ func (mq *MQ) reconnect() {
 				logrus.Printf("rabbitmq chCloseCh err:%v\n", amqpErr)
 			}
 			mq.retrying.Store(true)
-
-			err := mq.Channel.Close()
-			if err != nil {
-				// logrus.Printf("rabbitmq Channel close err: %v", err)
-			}
-			err = mq.Client.Close()
-			if err != nil {
-				// logrus.Printf("rabbitmq Client close err: %v", err)
-			}
 		}
 
 		time.Sleep(3 * time.Second)
