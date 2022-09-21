@@ -1,0 +1,9 @@
+.svn
+.tmp
+.download
+output
+.*.swp
+.*.swo
+.idea
+log
+bin

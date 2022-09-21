@@ -1,0 +1,111 @@
+# 项目名称
+简要说明
+```
+[背景]:
+    在调研过程中，经常需要对一些网站进行定向抓取。由于go包含各种强大的库，使用go做定向抓取比较简单。请使用go开发一个迷你定向抓取器mini_spider，实现对种子链接的抓取，并把URL长相符合特定pattern的网页保存到磁盘上。
+
+[程序运行]：
+   ./bin/mini_spider -c ../conf -l ../log
+
+[配置文件spider.conf]：
+    [spider]
+    # 种子文件路径
+    urlListFile = ../data/url.data
+    # 抓取结果存储目录 
+    outputDirectory = ../output
+    # 最大抓取深度(种子为0级)
+    maxDepth = 1
+    # 抓取间隔. 单位: 秒 
+    crawlInterval =  1
+    # 抓取超时. 单位: 秒 
+    crawlTimeout = 1
+    # 需要存储的目标网页URL pattern(正则表达式)
+    targetUrl = .*.(htm|html)$
+    # 抓取routine数 
+    threadCount = 8
+   
+[种子文件为json格式，示例如下]：
+   [
+     "http://www.baidu.com",
+     "http://www.sina.com.cn",
+     ...
+   ]  
+
+[要求和注意事项]：
+    1. 需要支持命令行参数处理。具体包含:  -h(帮助)、-v(版本)、-c(配置文件路径）、-l（日志文件路径，2个日志：mini_spider.log和mini_spider.wf.log)
+    2. 抓取网页的顺序没有限制
+    3. 单个网页抓取或解析失败，不能导致整个程序退出。需要在日志中记录下错误原因并继续。
+    4. 当程序完成所有抓取任务后，必须优雅退出
+    5. 从HTML提取链接时需要处理相对路径和绝对路径
+    6. 需要能够处理不同字符编码的网页(例如utf-8或gbk)
+    7. 网页存储时每个网页单独存为一个文件，以URL为文件名。注意对URL中的特殊字符，需要做转义
+    8. 要求支持多routine并行抓取（注意：这里并不是指简单设置GOMAXPROCS>1)
+    9. 代码严格遵守百度Golang编码规范V1.1（http://wiki.baidu.com/pages/viewpage.action?pageId=104882818）
+    10. 不仅仅考察编程规范，同时也考察编程思路：代码的可读性和可维护性要好，合理进行pakcage、函数的设计和划分，多线程间的同步、信号量的使用等
+    11. 完成相应的单元测试和使用demo。你的demo必须可运行，单元测试有效而且通过
+    12. 注意控制抓取间隔（设计上可以针对单个routine控制，也可以针对站点进行控制），避免对方网站封禁百度IP。可以使用Ps Python CM委员会为Python good cooder考试提供测试抓取网站: http://pycm.baidu.com:8081。
+    13. 日志库请使用http://icode.baidu.com/repos/baidu/go-lib/log
+    14. 主配置文件读取使用https://github.com/go-gcfg/gcfg
+    15. html解析请使用 https://go.googlesource.com/net/
+    16. 编译环境配置请参考：http://wiki.baidu.com/pages/viewpage.action?pageId=515622823
+    17. 对于配置文件的异常，需要进行检查和处理
+```
+## 设计思路
+ 设计一个队列和协程池来做任务,每个协程从队列中取任务执行，在执行任务中发现子页面就创建任务添加，所有任务执行完成后退出
+### 程序初始化
+
+* 读取命令行参数、初始化日志、读取配置文件、url文件
+* 创建并初始化协程和队列，添加任务，调用其Start方法开始调度
+* 调用Wait方法等待任务结束
+
+### 调度主要逻辑
+
+* 用for循环来创建配置的routine数量
+* 每一个routine中循环从任务队列中取出任务，然后执行任务
+* 任务中发现新的任务，就添加到任务队列中
+* 用一个任务Channel来判断任务是否结束
+* 如果队列中的任务为空，且没有协程在执行任务中，就退出协程
+
+### 任务执行主要逻辑
+
+* 判断当前任务的深度，大于等于MaxDepth则返回
+* 判断当前任务的URL是否已经爬取过，若是则直接返回，否则开启go routine异步执行任务
+* 获取当前任务的域名（站点），检查是否满足爬取间隔的要求
+* 根据URL爬取网页，失败则记录日志并返回
+* 判断其Content-Type是不是文本，不是则记录日志并返回
+* 将爬取到的网页转换成UTF-8格式
+* 判断该URL是否满足目标正则表达式，若满足则将其保存至磁盘
+* 解析爬取到的网页，将其子URL加入任务队列
+
+### 控制抓取间隔
+
+* 通过sync.Map和time.Timer实现
+* sync.Map的Key为hostname，Value为timer
+* 每次执行抓取任务前通过任务的URL解析出hostname，通过hostname拿到该站点的timer，等待timer的剩余时间后，重置timer执行抓取任务
+
+### 并发控制
+
+* 通过sync.WaitGroup来做并发控制
+* 创建一个channel来判断任务是否执行完
+
+### 退出
+
+* 使用sync.WaitGroup的wait方法等待所有线程结束退出
+
+
+## 快速开始
+如何构建、安装、运行
+* sh build_run.sh
+## 测试
+如何执行自动化测试
+* go test 
+## 如何贡献
+贡献patch流程、质量要求
+
+## 讨论
+百度 Go 交流群：1450752
+
+## 链接
+[百度 Go 编码规范](https://ku.baidu-int.com/d/dRSz9SmnNb2tes)
+[百度内 Go Module 使用指南](https://ku.baidu-int.com/d/SzGt0sD37hWmmp)
+
